@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -17,18 +18,20 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import au.com.gman.bottlerocket.domain.UploadResponse
 import au.com.gman.bottlerocket.network.ApiService
-import au.com.gman.bottlerocket.network.ImageProcessor
+import au.com.gman.bottlerocket.imaging.ImageProcessor
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.HiltAndroidApp
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private lateinit var previewView: PreviewView
     private lateinit var statusText: TextView
@@ -38,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private var qrCodeDetected = false
     private var lastQrData: String? = null
+    private var lastQrBoundingBox: Rect? = null
 
     // Services
     private val imageProcessor = ImageProcessor()
@@ -133,16 +137,25 @@ class MainActivity : AppCompatActivity() {
                 val qrCode = barcodes.first()
                 qrCodeDetected = true
                 lastQrData = qrCode.rawValue
+                lastQrBoundingBox = qrCode.boundingBox
 
                 val templateInfo = imageProcessor.parseQRCode(qrCode.rawValue ?: "")
 
+                // Special handling for 04o template
+                val displayText = if (qrCode.rawValue?.contains("04o", ignoreCase = true) == true) {
+                    "QR: 04o template (500x500 crop)"
+                } else {
+                    "QR: ${templateInfo.position} - ${templateInfo.type}"
+                }
+
                 runOnUiThread {
-                    statusText.text = "QR: ${templateInfo.position} - ${templateInfo.type}"
+                    statusText.text = displayText
                     statusText.setBackgroundColor(0x8000FF00.toInt())
                     captureButton.isEnabled = true
                 }
             } else {
                 qrCodeDetected = false
+                lastQrBoundingBox = null
                 runOnUiThread {
                     statusText.text = "Position QR code in frame"
                     statusText.setBackgroundColor(0x80FFA500.toInt())
@@ -175,21 +188,34 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(baseContext, "Processing...", Toast.LENGTH_SHORT).show()
 
                     cameraExecutor.execute {
-                        processAndSaveImage(photoFile, lastQrData ?: "")
+                        processAndSaveImage(photoFile, lastQrData ?: "", lastQrBoundingBox)
                     }
                 }
             }
         )
     }
 
-    private fun processAndSaveImage(imageFile: File, qrData: String) {
+    private fun processAndSaveImage(imageFile: File, qrData: String, qrBoundingBox: Rect?) {
         try {
             val originalBitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
-            val processedBitmap = imageProcessor.processImage(originalBitmap, qrData)
+
+            Log.d(TAG, "Processing image: ${originalBitmap.width}x${originalBitmap.height}")
+            Log.d(TAG, "QR Data: $qrData")
+            Log.d(TAG, "QR Box: $qrBoundingBox")
+
+            // Process with QR bounding box for smart cropping
+            val processedBitmap = imageProcessor.processImageWithQR(
+                originalBitmap,
+                qrData,
+                qrBoundingBox
+            )
+
+            Log.d(TAG, "Processed: ${processedBitmap.width}x${processedBitmap.height}")
 
             saveImage(processedBitmap, qrData)
 
-            // Upload to backend
+            // Upload to backend (optional)
+            /*
             apiService.uploadImage(imageFile, qrData, object : ApiService.UploadCallback {
                 override fun onSuccess(response: UploadResponse) {
                     runOnUiThread {
@@ -203,6 +229,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             })
+            */
 
         } catch (e: Exception) {
             Log.e(TAG, "Processing failed", e)
