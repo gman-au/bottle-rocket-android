@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.BottleRocket" parent="Theme.AppCompat.Light.DarkActionBar" />
+    <style name="Theme.BottleRocket" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/purple_200</item>
+        <!-- Background color -->
+        <item name="android:colorBackground">@color/teal_700</item>
+        <!-- Customize other theme attributes here -->
+    </style>
 </resources>
