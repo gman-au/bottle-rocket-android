@@ -1,8 +1,10 @@
 package au.com.gman.bottlerocket.injection
-import au.com.gman.bottlerocket.imaging.DummyTemplateMapper
+import au.com.gman.bottlerocket.imaging.QrCodeTemplateMatcher
 import au.com.gman.bottlerocket.imaging.ImageProcessor
+import au.com.gman.bottlerocket.imaging.QrCodeDetector
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
-import au.com.gman.bottlerocket.interfaces.ITemplateMapper
+import au.com.gman.bottlerocket.interfaces.IQrCodeDetector
+import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -19,7 +21,12 @@ abstract class ImagingModule {
 
     @Binds
     abstract fun bindTemplateMapper(
-        templateMapper: DummyTemplateMapper
-    ) : ITemplateMapper
+        templateMapper: QrCodeTemplateMatcher
+    ) : IQrCodeTemplateMatcher
+
+    @Binds
+    abstract fun bindQrCodeDetector(
+        qrCodeDetector: QrCodeDetector
+    ) : IQrCodeDetector
 
 }

@@ -23,7 +23,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import au.com.gman.bottlerocket.domain.TemplateMatchResponse
+import au.com.gman.bottlerocket.imaging.QrCodeDetector
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
+import au.com.gman.bottlerocket.interfaces.ITemplateListener
 import au.com.gman.bottlerocket.network.ApiService
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -41,6 +44,10 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var imageProcessor: IImageProcessor
+
+    @Inject
+    lateinit var qrCodeDetector: QrCodeDetector
+
     private lateinit var previewView: PreviewView
     private lateinit var statusText: TextView
     private lateinit var captureButton: Button
@@ -67,6 +74,29 @@ class MainActivity : AppCompatActivity() {
         captureButton.setOnClickListener {
             takePhoto()
         }
+
+        qrCodeDetector.setListener(object : ITemplateListener {
+            override fun onDetectionSuccess(matchedTemplate: TemplateMatchResponse) {
+                runOnUiThread {
+                    qrCodeDetected = matchedTemplate.matchFound
+                    captureButton.isEnabled = qrCodeDetected
+
+                    // set bounding box
+                    lastQrBoundingBox = null
+
+                    statusText.text = when (qrCodeDetected) {
+                        true -> "Found something"
+                        false -> matchedTemplate.qrCode ?: "No code found"
+                    }
+                    statusText.setBackgroundColor(
+                        when (qrCodeDetected) {
+                            true -> 0x8000FF00.toInt()
+                            false -> 0x80FFA500.toInt()
+                        })
+                }
+            }
+
+        })
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -98,7 +128,8 @@ class MainActivity : AppCompatActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, QRCodeAnalyzer())
+//                    it.setAnalyzer(cameraExecutor, QRCodeAnalyzer())
+                    it.setAnalyzer(cameraExecutor, qrCodeDetector)
                 }
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA

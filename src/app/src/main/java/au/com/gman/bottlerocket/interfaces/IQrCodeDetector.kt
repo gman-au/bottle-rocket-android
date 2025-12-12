@@ -1,4 +1,8 @@
 package au.com.gman.bottlerocket.interfaces
 
-class IQrCodeDetector {
+import androidx.camera.core.ImageAnalysis
+
+interface IQrCodeDetector : ImageAnalysis.Analyzer {
+    fun setListener(listener: ITemplateListener)
 }
+

@@ -10,13 +10,13 @@ import android.graphics.Rect
 import android.util.Log
 import au.com.gman.bottlerocket.domain.QRTemplateInfo
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
-import au.com.gman.bottlerocket.interfaces.ITemplateMapper
+import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
 
 class ImageProcessor @Inject constructor(
-    private val templateMapper: ITemplateMapper
+    private val templateMapper: IQrCodeTemplateMatcher
 ): IImageProcessor {
 
     companion object {
