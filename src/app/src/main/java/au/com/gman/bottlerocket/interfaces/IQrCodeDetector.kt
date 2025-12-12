@@ -4,5 +4,7 @@ import androidx.camera.core.ImageAnalysis
 
 interface IQrCodeDetector : ImageAnalysis.Analyzer {
     fun setListener(listener: ITemplateListener)
+
+    fun setPreviewSize(width: Int, height: Int)
 }
 

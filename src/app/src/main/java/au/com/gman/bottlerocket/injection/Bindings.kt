@@ -1,8 +1,6 @@
 package au.com.gman.bottlerocket.injection
-import au.com.gman.bottlerocket.imaging.QrCodeTemplateMatcher
-import au.com.gman.bottlerocket.imaging.ImageProcessor
 import au.com.gman.bottlerocket.imaging.QrCodeDetector
-import au.com.gman.bottlerocket.interfaces.IImageProcessor
+import au.com.gman.bottlerocket.imaging.QrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IQrCodeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import dagger.Binds
@@ -13,11 +11,6 @@ import dagger.hilt.components.SingletonComponent
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ImagingModule {
-
-    @Binds
-    abstract fun bindImageProcessor(
-        imageProcessor: ImageProcessor
-    ) : IImageProcessor
 
     @Binds
     abstract fun bindTemplateMapper(

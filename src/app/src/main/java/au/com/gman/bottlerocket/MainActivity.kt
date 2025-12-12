@@ -3,12 +3,10 @@ package au.com.gman.bottlerocket
 import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
-import android.graphics.Rect
+import android.graphics.Path
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -24,7 +22,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import au.com.gman.bottlerocket.domain.TemplateMatchResponse
 import au.com.gman.bottlerocket.imaging.QrCodeDetector
-import au.com.gman.bottlerocket.interfaces.IImageProcessor
 import au.com.gman.bottlerocket.interfaces.ITemplateListener
 import au.com.gman.bottlerocket.network.ApiService
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,9 +36,6 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var imageProcessor: IImageProcessor
-
-    @Inject
     lateinit var qrCodeDetector: QrCodeDetector
 
     private lateinit var previewView: PreviewView
@@ -54,7 +48,7 @@ class MainActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private var matchFound = false
     private var lastQrData: String? = null
-    private var lastQrBoundingBox: Rect? = null
+    private var lastPageOverlayPath: Path? = null
 
     // Services
     private val apiService = ApiService("https://your-backend-url.com")
@@ -75,17 +69,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         qrCodeDetector.setListener(object : ITemplateListener {
-            override fun onDetectionSuccess(qrPageTemplate: TemplateMatchResponse) {
+            override fun onDetectionSuccess(matchedTemplate: TemplateMatchResponse) {
                 runOnUiThread {
-                    matchFound = qrPageTemplate.matchFound
+
+                    overlayView.post {
+                        android.util.Log.d("OVERLAY", "Preview size: ${overlayView.width} x ${overlayView.height}")
+                    }
+
+                    matchFound = matchedTemplate.matchFound
                     captureButton.isEnabled = matchFound
 
                     // set bounding box
-                    lastQrBoundingBox = qrPageTemplate.template?.boundingBox
+                    lastPageOverlayPath = matchedTemplate.overlay
 
                     statusText.text = when (matchFound) {
-                        true -> "Found something"
-                        false -> qrPageTemplate.qrCode ?: "No code found"
+                        true -> matchedTemplate.qrCode
+                        false -> matchedTemplate.qrCode ?: "No code found"
                     }
                     statusText.setBackgroundColor(
                         when (matchFound) {
@@ -93,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                             false -> 0x80FFA500.toInt()
                         })
 
-                    overlayView.setPageBoundingBox(lastQrBoundingBox)
+                    overlayView.setOverlayPath(lastPageOverlayPath)
                 }
             }
 
@@ -139,6 +138,14 @@ class MainActivity : AppCompatActivity() {
                 cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageCapture, imageAnalyzer
                 )
+
+                overlayView.post {
+                    val previewWidth = overlayView.width
+                    val previewHeight = overlayView.height
+                    android.util.Log.d(TAG, "Setting preview size: ${previewWidth}x${previewHeight}")
+                    qrCodeDetector.setPreviewSize(previewWidth, previewHeight)
+                }
+
             } catch (exc: Exception) {
                 Toast.makeText(this, "Camera binding failed", Toast.LENGTH_SHORT).show()
             }
@@ -168,14 +175,15 @@ class MainActivity : AppCompatActivity() {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     Toast.makeText(baseContext, "Processing...", Toast.LENGTH_SHORT).show()
 
-                    cameraExecutor.execute {
+                    /*cameraExecutor.execute {
                         processAndSaveImage(photoFile, lastQrData ?: "", lastQrBoundingBox)
-                    }
+                    }*/
                 }
             }
         )
     }
 
+    /*
     private fun processAndSaveImage(imageFile: File, qrData: String, qrBoundingBox: Rect?) {
         try {
             val originalBitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
@@ -221,6 +229,7 @@ class MainActivity : AppCompatActivity() {
             imageFile.delete()
         }
     }
+    */
 
     private fun saveImage(bitmap: android.graphics.Bitmap, qrData: String) {
         val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis())

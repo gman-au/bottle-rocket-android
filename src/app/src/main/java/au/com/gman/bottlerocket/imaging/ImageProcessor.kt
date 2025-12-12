@@ -6,10 +6,10 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.util.Log
-import au.com.gman.bottlerocket.domain.QRTemplateInfo
-import au.com.gman.bottlerocket.interfaces.IImageProcessor
+import au.com.gman.bottlerocket.domain.QrTemplateInfo
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import javax.inject.Inject
 import kotlin.math.max
@@ -17,13 +17,13 @@ import kotlin.math.min
 
 class ImageProcessor @Inject constructor(
     private val templateMapper: IQrCodeTemplateMatcher
-): IImageProcessor {
+) {
 
     companion object {
         private const val TAG = "ImageProcessor"
     }
 
-    override fun parseQRCode(qrData: String): QRTemplateInfo {
+    fun parseQRCode(qrData: String): QrTemplateInfo {
         val parts = qrData.replace(" ", "")
 
         val position = if (parts.startsWith("P01")) "LEFT" else "RIGHT"
@@ -32,10 +32,10 @@ class ImageProcessor @Inject constructor(
         val type = typeMatch?.value ?: "UNKNOWN"
         val sequence = parts.substringAfter("S", "000")
 
-        return QRTemplateInfo(position, version, type, sequence, Rect(0, 0, 0, 0))
+        return QrTemplateInfo(type, Path())
     }
 
-    override fun enhanceImage(bitmap: Bitmap): Bitmap {
+    fun enhanceImage(bitmap: Bitmap): Bitmap {
         val enhanced = bitmap.copy(Bitmap.Config.ARGB_8888, true)
 
         val contrastFactor = 1.2f
@@ -57,7 +57,7 @@ class ImageProcessor @Inject constructor(
         return enhanced
     }
 
-    override fun processImage(bitmap: Bitmap, qrData: String): Bitmap {
+    fun processImage(bitmap: Bitmap, qrData: String): Bitmap {
         val templateInfo = parseQRCode(qrData)
         return enhanceImage(bitmap)
     }
@@ -65,6 +65,7 @@ class ImageProcessor @Inject constructor(
     /**
      * Process image with QR bounding box for cropping and perspective correction
      */
+    /*
     override fun processImageWithQR(
         bitmap: Bitmap,
         qrData: String,
@@ -97,7 +98,7 @@ class ImageProcessor @Inject constructor(
             }
         }
     }
-
+*/
     /**
      * Crop a specific sized box relative to QR position
      */
@@ -177,7 +178,7 @@ class ImageProcessor @Inject constructor(
     private fun cropPageFromBottomLeft(
         bitmap: Bitmap,
         qrBox: Rect,
-        templateInfo: QRTemplateInfo
+        templateInfo: QrTemplateInfo
     ): Bitmap {
         // Estimate page dimensions based on QR size
         // Typical Rocketbook QR is about 0.5" square on an 8.5x11" page
@@ -216,7 +217,7 @@ class ImageProcessor @Inject constructor(
     private fun cropPageFromBottomRight(
         bitmap: Bitmap,
         qrBox: Rect,
-        templateInfo: QRTemplateInfo
+        templateInfo: QrTemplateInfo
     ): Bitmap {
         val qrSizePixels = qrBox.width()
         val estimatedPageWidthPixels = (qrSizePixels * 17).toInt()
