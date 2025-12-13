@@ -1,4 +1,4 @@
-package au.com.gman.bottlerocket
+package au.com.gman.bottlerocket.activity
 
 import android.Manifest
 import android.content.ContentValues
@@ -22,6 +22,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import au.com.gman.bottlerocket.PageCaptureOverlayView
+import au.com.gman.bottlerocket.R
 import au.com.gman.bottlerocket.domain.TemplateMatchResponse
 import au.com.gman.bottlerocket.imaging.QrCodeDetector
 import au.com.gman.bottlerocket.interfaces.ITemplateListener
