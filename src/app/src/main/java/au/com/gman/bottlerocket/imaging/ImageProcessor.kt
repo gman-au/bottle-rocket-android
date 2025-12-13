@@ -14,7 +14,7 @@ import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
-
+/*
 class ImageProcessor @Inject constructor(
     private val templateMapper: IQrCodeTemplateMatcher
 ) {
@@ -61,10 +61,6 @@ class ImageProcessor @Inject constructor(
         val templateInfo = parseQRCode(qrData)
         return enhanceImage(bitmap)
     }
-
-    /**
-     * Process image with QR bounding box for cropping and perspective correction
-     */
     /*
     override fun processImageWithQR(
         bitmap: Bitmap,
@@ -99,9 +95,6 @@ class ImageProcessor @Inject constructor(
         }
     }
 */
-    /**
-     * Crop a specific sized box relative to QR position
-     */
     private fun cropFromQRPosition(
         bitmap: Bitmap,
         qrBox: Rect,
@@ -171,10 +164,6 @@ class ImageProcessor @Inject constructor(
         return enhanceImage(scaledBitmap)
     }
 
-    /**
-     * Crop full page from bottom-left QR position
-     * Assumes standard letter size ratio
-     */
     private fun cropPageFromBottomLeft(
         bitmap: Bitmap,
         qrBox: Rect,
@@ -211,9 +200,6 @@ class ImageProcessor @Inject constructor(
         return enhanceImage(croppedBitmap)
     }
 
-    /**
-     * Crop full page from bottom-right QR position
-     */
     private fun cropPageFromBottomRight(
         bitmap: Bitmap,
         qrBox: Rect,
@@ -248,10 +234,7 @@ class ImageProcessor @Inject constructor(
         return enhanceImage(croppedBitmap)
     }
 
-    /**
-     * Apply perspective correction to unwarp a skewed page
-     * This uses a simple 4-point perspective transform
-     */
+
     fun applyPerspectiveCorrection(
         bitmap: Bitmap,
         corners: FloatArray
@@ -318,4 +301,4 @@ class ImageProcessor @Inject constructor(
             true
         )
     }
-}
+}*/

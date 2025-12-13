@@ -3,25 +3,23 @@ package au.com.gman.bottlerocket.imaging
 import android.graphics.Matrix
 import android.graphics.Path
 import android.graphics.Point
-import android.graphics.RectF
 import android.util.Log
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
+import au.com.gman.bottlerocket.domain.scale
+import au.com.gman.bottlerocket.domain.toPointArray
 import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
 import javax.inject.Inject
 import kotlin.math.atan2
 
 class PageTemplateRescaler @Inject constructor(): IPageTemplateRescaler {
     override fun rescalePageOverlay(
-        qrCorners: Array<Point>,
-        pageTemplateBoundingBox: RectF,
+        qrCorners: RocketBoundingBox,
+        pageTemplateBoundingBox: RocketBoundingBox,
         imageWidth: Float,
         imageHeight: Float,
         previewWidth: Float,
         previewHeight: Float
-    ): Path {
-
-        val path = Path()
-
-        qrCorners.let { if (it.size < 4) return path }
+    ): RocketBoundingBox {
 
         // Calculate scale factors from image space to preview space
         val scaleX = previewWidth / imageWidth
@@ -32,16 +30,11 @@ class PageTemplateRescaler @Inject constructor(): IPageTemplateRescaler {
         val qrRotationDegrees = calculateQRRotationAngle(qrCorners)
         Log.d("OVERLAY", "Rotation: $qrRotationDegrees°")
 
-        val anchorPoint = qrCorners[3]
+        val anchorPoint = pageTemplateBoundingBox.bottomLeft
         Log.d("OVERLAY", "Anchor (image space): (${anchorPoint.x}, ${anchorPoint.y})")
 
         // Scale page dimensions to match preview
-        val pageCorners = floatArrayOf(
-            pageTemplateBoundingBox.left * scaleX, pageTemplateBoundingBox.top * scaleY,
-            pageTemplateBoundingBox.right * scaleX, pageTemplateBoundingBox.top * scaleY,
-            pageTemplateBoundingBox.right * scaleX, pageTemplateBoundingBox.bottom * scaleY,
-            pageTemplateBoundingBox.left * scaleX, pageTemplateBoundingBox.bottom * scaleY
-        )
+        val pageCorners = pageTemplateBoundingBox.scale(scaleX, scaleY)
 
         val matrix = Matrix()
         matrix.setRotate(qrRotationDegrees)
@@ -61,28 +54,22 @@ class PageTemplateRescaler @Inject constructor(): IPageTemplateRescaler {
             Log.d("OVERLAY", "  (${pageCorners[i]}, ${pageCorners[i+1]})")
         }
 
-        path.moveTo(pageCorners[0], pageCorners[1])
-        path.lineTo(pageCorners[2], pageCorners[3])
-        path.lineTo(pageCorners[4], pageCorners[5])
-        path.lineTo(pageCorners[6], pageCorners[7])
-        path.close()
-
-        return path
+        return RocketBoundingBox(pageCorners)
     }
 
     /**
      * Calculate the rotation angle of the QR code from its corner points
      * Returns angle in degrees
      */
-    private fun calculateQRRotationAngle(corners: Array<Point>): Float {
-        if (corners.size < 2) return 0f
+    private fun calculateQRRotationAngle(cornerBox: RocketBoundingBox): Float {
+        val corners = cornerBox.toPointArray()
 
         // Use top edge (corner 0 to corner 1) to determine rotation
         val topLeft = corners[0]
         val topRight = corners[1]
 
-        val deltaX = (topRight.x - topLeft.x).toFloat()
-        val deltaY = (topRight.y - topLeft.y).toFloat()
+        val deltaX = (topRight.x - topLeft.x)
+        val deltaY = (topRight.y - topLeft.y)
 
         // Calculate angle in radians, then convert to degrees
         val angleRadians = atan2(deltaY, deltaX)

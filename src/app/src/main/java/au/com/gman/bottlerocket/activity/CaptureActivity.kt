@@ -53,10 +53,15 @@ class CaptureActivity : AppCompatActivity() {
     private lateinit var cancelButton: Button
     private lateinit var cameraExecutor: ExecutorService
 
+    private lateinit var lastMatchedTemplate: TemplateMatchResponse
+
     private var imageCapture: ImageCapture? = null
     private var matchFound = false
     private var lastQrData: String? = null
     private var lastPageOverlayPath: Path? = null
+
+    private var previewWidth: Int = 0
+    private var previewHeight: Int = 0
 
     // Services
     private val apiService = ApiService("https://your-backend-url.com")
@@ -99,8 +104,11 @@ class CaptureActivity : AppCompatActivity() {
                             false -> 0x80FFA500.toInt()
                         })
 
-                    overlayView.setPageOverlayPath(matchedTemplate.pageOverlayPath)
+                    lastMatchedTemplate = matchedTemplate
+                    overlayView.setPageOverlayBox(matchedTemplate.pageOverlayPath)
                     overlayView.setQrOverlayPath(matchedTemplate.qrCodeOverlayPath)
+
+                    updateDebugText()
                 }
             }
 
@@ -113,6 +121,18 @@ class CaptureActivity : AppCompatActivity() {
                 this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
             )
         }
+    }
+
+    private fun updateDebugText() {
+        val builder = StringBuilder()
+        builder.appendLine()
+        builder.appendLine(lastMatchedTemplate.qrCode)
+        builder.appendLine("QR box:")
+        builder.appendLine(lastMatchedTemplate.qrCodeOverlayPath.toString())
+        builder.appendLine("Page overlay box:")
+        builder.appendLine(lastMatchedTemplate.pageOverlayPath.toString())
+        builder.appendLine("Preview size: ${previewWidth} x ${previewHeight}")
+        debugText.text = builder.toString()
     }
 
     private fun startCamera() {
@@ -148,8 +168,8 @@ class CaptureActivity : AppCompatActivity() {
                 )
 
                 overlayView.post {
-                    val previewWidth = overlayView.width
-                    val previewHeight = overlayView.height
+                    previewWidth = overlayView.width
+                    previewHeight = overlayView.height
                     Log.d(TAG, "Setting preview size: ${previewWidth}x${previewHeight}")
                     qrCodeDetector.setPreviewSize(previewWidth, previewHeight)
                 }

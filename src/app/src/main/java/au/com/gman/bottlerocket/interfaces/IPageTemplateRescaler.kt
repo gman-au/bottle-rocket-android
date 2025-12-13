@@ -1,16 +1,14 @@
 package au.com.gman.bottlerocket.interfaces
 
-import android.graphics.Path
-import android.graphics.Point
-import android.graphics.RectF
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
 
 interface IPageTemplateRescaler {
     fun rescalePageOverlay(
-        qrCorners: Array<Point>,
-        pageTemplateBoundingBox: RectF,
+        qrCorners: RocketBoundingBox,
+        pageTemplateBoundingBox: RocketBoundingBox,
         imageWidth: Float,
         imageHeight: Float,
         previewWidth: Float,
         previewHeight: Float
-    ): Path
+    ): RocketBoundingBox
 }
