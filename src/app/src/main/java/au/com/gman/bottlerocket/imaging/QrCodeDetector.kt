@@ -62,7 +62,7 @@ class QrCodeDetector @Inject constructor(
 
                         if (pageTemplate != null) {
                             matchFound = true
-                            val pageTemplateBoundingBox = RocketBoundingBox(pageTemplate.pageDimensions)
+                            val pageTemplateBoundingBox = pageTemplate.pageDimensions
 
                             // Calculate page overlay path based on QR position and template
                             val rescaledPageOverlayPath = pageTemplateRescaler.rescalePageOverlay(

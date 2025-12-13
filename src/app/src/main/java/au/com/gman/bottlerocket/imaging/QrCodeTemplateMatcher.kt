@@ -1,8 +1,8 @@
 package au.com.gman.bottlerocket.imaging
 
-import android.graphics.RectF
+import android.graphics.PointF
 import au.com.gman.bottlerocket.domain.PageTemplate
-import au.com.gman.bottlerocket.domain.TemplateMatchResponse
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import javax.inject.Inject
 
@@ -11,18 +11,20 @@ class QrCodeTemplateMatcher @Inject constructor(): IQrCodeTemplateMatcher {
     val templatesMap = mapOf(
         "04o" to PageTemplate(
             type = "1",
-            pageDimensions = RectF(
-                -500f,  // left: 1000px to the left of QR
-                -700f,  // top: 1400px above QR
-                0f,      // right: at QR position
-                0f       // bottom: at QR position
+            // Page dimensions in QR-relative units
+            // If QR is ~50px and page is 500x700px, that's 10x14 QR units
+            pageDimensions = RocketBoundingBox(
+                topLeft = PointF(-21.5f, -28f),    // 21.5 QR-widths left, 28 QR-heights up
+                topRight = PointF(0f, -28f),       // at QR X, 28 QR-heights up
+                bottomRight = PointF(0f, 0f),      // at QR position (bottom-right corner)
+                bottomLeft = PointF(-21.5f, 0f)    // 21.5 QR-widths left, at QR Y
             )
         )
     )
 
     override fun tryMatch(qrCode: String?): PageTemplate? {
         return if (qrCode in templatesMap) {
-            templatesMap[qrCode]!!
+            templatesMap[qrCode]
         } else {
             null
         }

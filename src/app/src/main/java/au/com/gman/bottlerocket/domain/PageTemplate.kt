@@ -4,5 +4,5 @@ import android.graphics.RectF
 
 data class PageTemplate (
     val type: String,
-    val pageDimensions: RectF
+    val pageDimensions: RocketBoundingBox
 )
