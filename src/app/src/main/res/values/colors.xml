@@ -6,5 +6,5 @@
     <color name="bottle_rocket_dark">#FF093624</color>
     <color name="bottle_rocket_light">#FF96F7D0</color>
     <color name="bottle_rocket_light_disabled">#5596F7D0</color>
-    <color name="debug_text">#FFFFFF00</color>
+    <color name="debug_text">#FFFF0000</color>
 </resources>

@@ -148,7 +148,7 @@ class CaptureActivity : AppCompatActivity() {
                 }
 
             imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .setTargetRotation(windowManager.defaultDisplay.rotation)
                 .build()
 
