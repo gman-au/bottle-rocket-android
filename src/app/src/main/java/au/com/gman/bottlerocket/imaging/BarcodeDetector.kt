@@ -14,7 +14,7 @@ import javax.inject.Inject
 class BarcodeDetector @Inject constructor(
     private val qrCodeHandler: IQrCodeHandler,
     private val screenDimensions: IScreenDimensions
-): IBarcodeDetector {
+) : IBarcodeDetector {
 
     private val scanner =
         BarcodeScanning
@@ -28,16 +28,32 @@ class BarcodeDetector @Inject constructor(
 
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val image = InputImage.fromMediaImage(
-                mediaImage,
-                imageProxy.imageInfo.rotationDegrees
-            )
+        val mediaImage =
+            imageProxy
+                .image
 
-            val imageWidth = mediaImage.width
-            val imageHeight = mediaImage.height
-            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+        if (mediaImage != null) {
+            val image =
+                InputImage
+                    .fromMediaImage(
+                        mediaImage,
+                        imageProxy
+                            .imageInfo
+                            .rotationDegrees
+                    )
+
+            val imageWidth =
+                mediaImage
+                    .width
+
+            val imageHeight =
+                mediaImage
+                    .height
+
+            val rotationDegrees =
+                imageProxy
+                    .imageInfo
+                    .rotationDegrees
 
             screenDimensions
                 .setImageSize(
@@ -61,14 +77,15 @@ class BarcodeDetector @Inject constructor(
                         qrCodeHandler
                             .handle(barcode)
 
-                    listener
-                        ?.onDetectionSuccess(barcodeDetectionResult)
+                    listener?.onDetectionSuccess(barcodeDetectionResult)
                 }
                 .addOnCompleteListener {
-                    imageProxy.close()
+                    imageProxy
+                        .close()
                 }
         } else {
-            imageProxy.close()
+            imageProxy
+                .close()
         }
     }
 }

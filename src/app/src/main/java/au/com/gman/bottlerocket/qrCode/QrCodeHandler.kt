@@ -6,7 +6,6 @@ import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.applyRotation
 import au.com.gman.bottlerocket.domain.calculateRotationAngle
-import au.com.gman.bottlerocket.domain.normalize
 import au.com.gman.bottlerocket.domain.scaleWithOffset
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
@@ -67,9 +66,9 @@ class QrCodeHandler @Inject constructor(
                 }
             )
 
-            // the second scale factor is the comparative QR code vs the actual
-            // we need to 'straighten up' the QR code box
-            val rotationAngle = qrBoundingBoxUnscaled.calculateRotationAngle();
+            val rotationAngle =
+                qrBoundingBoxUnscaled
+                    .calculateRotationAngle();
 
             Log.d(
                 AppConstants.APPLICATION_LOG_TAG,
@@ -78,48 +77,8 @@ class QrCodeHandler @Inject constructor(
                 }
             )
 
-            val straightQrBox =
-                qrBoundingBoxUnscaled
-                    .applyRotation(
-                        -rotationAngle,
-                        qrBoundingBoxUnscaled.bottomLeft
-                    )
-                    .normalize()
-
-            val scalingFactorQrCode =
-                viewportRescaler
-                    .calculateScalingFactorWithOffset(
-                        firstWidth = 20.0F,
-                        firstHeight = 20.0F,
-                        secondWidth = straightQrBox.topRight.x - straightQrBox.topLeft.x,
-                        secondHeight = straightQrBox.bottomRight.y - straightQrBox.topRight.y,
-                        rotationAngle = 0
-                    )
-
-            /*Log.d(
-                BottleRocketApplication.AppConstants.APPLICATION_LOG_TAG,
-                buildString {
-                    appendLine("scalingFactorQrCode: $scalingFactorQrCode")
-                }
-            )
-
-            val scalingFactor = PointF(
-                scalingFactorViewport.scale.x * 1,//,scalingFactorQrCode.x,
-                scalingFactorViewport.scale.y * 1//scalingFactorQrCode.y
-            )
-
-            Log.d(
-                BottleRocketApplication.AppConstants.APPLICATION_LOG_TAG,
-                buildString {
-                    appendLine("final scalingFactor: $scalingFactor")
-                }
-            )*/
-
             if (pageTemplate != null) {
                 matchFound = true
-
-                val qrTopLeft = qrBoundingBoxUnscaled.topLeft
-                val template = pageTemplate.pageDimensions
 
                 qrBoundingBoxScaled =
                     qrBoundingBoxUnscaled
@@ -141,14 +100,13 @@ class QrCodeHandler @Inject constructor(
                     }
                 )
 
-                /*
                 pageBoundingBox =
-                    scaledBoundingBox
+                    pageBoundingBox
                         .applyRotation(
                             rotationAngle,
-                            scaledBoundingBox.bottomLeft
+                            pageBoundingBox.bottomLeft
                         )
-                 */
+
             }
         }
 

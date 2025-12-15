@@ -44,5 +44,4 @@ abstract class ImagingModule {
     abstract fun bindScreenDimensions(
         screenDimensions: ScreenDimensions
     ) : IScreenDimensions
-
 }

@@ -9,7 +9,7 @@ import android.graphics.RectF
 import androidx.core.graphics.toPointF
 import kotlin.math.atan2
 
-data class RocketBoundingBox (
+data class RocketBoundingBox(
     val topLeft: PointF,
     val topRight: PointF,
     val bottomRight: PointF,
@@ -59,7 +59,7 @@ data class RocketBoundingBox (
         floats[7]
     )
 
-    constructor(points: Array<out Point>?) : this (
+    constructor(points: Array<out Point>?) : this(
         toPointArray(points)[0].toPointF(),
         toPointArray(points)[1].toPointF(),
         toPointArray(points)[2].toPointF(),
@@ -77,8 +77,8 @@ data class RocketBoundingBox (
 
 fun RocketBoundingBox.scaleWithOffset(scaleAndOffset: ScaleAndOffset): RocketBoundingBox {
     val offsetInSourceSpace = PointF(
-        -scaleAndOffset.offset.x / scaleAndOffset.scale.x,  // NEGATE the offset
-        -scaleAndOffset.offset.y / scaleAndOffset.scale.y   // NEGATE the offset
+        -scaleAndOffset.offset.x / scaleAndOffset.scale.x,
+        -scaleAndOffset.offset.y / scaleAndOffset.scale.y
     )
 
     return RocketBoundingBox(
@@ -101,10 +101,6 @@ fun RocketBoundingBox.scaleWithOffset(scaleAndOffset: ScaleAndOffset): RocketBou
     )
 }
 
-fun RocketBoundingBox.toPointArray(): Array<PointF> {
-    return arrayOf(topLeft, topRight, bottomRight, bottomLeft)
-}
-
 fun RocketBoundingBox.toFloatArray(): FloatArray {
     return floatArrayOf(
         topLeft.x, topLeft.y,
@@ -114,7 +110,7 @@ fun RocketBoundingBox.toFloatArray(): FloatArray {
     )
 }
 
-fun RocketBoundingBox.toPath() : Path {
+fun RocketBoundingBox.toPath(): Path {
     val path = Path()
 
     path.moveTo(topLeft.x, topLeft.y)

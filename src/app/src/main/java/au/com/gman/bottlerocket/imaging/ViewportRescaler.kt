@@ -11,7 +11,7 @@ import au.com.gman.bottlerocket.domain.normalize
 import au.com.gman.bottlerocket.domain.toFloatArray
 import javax.inject.Inject
 
-class ViewportRescaler @Inject constructor(): IViewportRescaler {
+class ViewportRescaler @Inject constructor() : IViewportRescaler {
 
     override fun calculateScalingFactorWithOffset(
         firstWidth: Float,
@@ -63,8 +63,14 @@ class ViewportRescaler @Inject constructor(): IViewportRescaler {
             offset = PointF(0f, -cropInFirstSpace * uniformScale)
         }
 
-        Log.d(AppConstants.APPLICATION_LOG_TAG, "First: ${actualFirstW}x${actualFirstH} (aspect: ${firstAspect})")
-        Log.d(AppConstants.APPLICATION_LOG_TAG, "Second: ${secondWidth}x${secondHeight} (aspect: ${secondAspect})")
+        Log.d(
+            AppConstants.APPLICATION_LOG_TAG,
+            "First: ${actualFirstW}x${actualFirstH} (aspect: ${firstAspect})"
+        )
+        Log.d(
+            AppConstants.APPLICATION_LOG_TAG,
+            "Second: ${secondWidth}x${secondHeight} (aspect: ${secondAspect})"
+        )
         Log.d(AppConstants.APPLICATION_LOG_TAG, "Scale: ${scale.x}, ${scale.y}")
         Log.d(AppConstants.APPLICATION_LOG_TAG, "Offset: ${offset.x}, ${offset.y}")
 
@@ -87,9 +93,18 @@ class ViewportRescaler @Inject constructor(): IViewportRescaler {
         // Step 3: Scale page template by QR dimensions
         val scaledPageIdeal = RocketBoundingBox(
             topLeft = PointF(pageBoxIdeal.topLeft.x * qrWidth, pageBoxIdeal.topLeft.y * qrHeight),
-            topRight = PointF(pageBoxIdeal.topRight.x * qrWidth, pageBoxIdeal.topRight.y * qrHeight),
-            bottomRight = PointF(pageBoxIdeal.bottomRight.x * qrWidth, pageBoxIdeal.bottomRight.y * qrHeight),
-            bottomLeft = PointF(pageBoxIdeal.bottomLeft.x * qrWidth, pageBoxIdeal.bottomLeft.y * qrHeight)
+            topRight = PointF(
+                pageBoxIdeal.topRight.x * qrWidth,
+                pageBoxIdeal.topRight.y * qrHeight
+            ),
+            bottomRight = PointF(
+                pageBoxIdeal.bottomRight.x * qrWidth,
+                pageBoxIdeal.bottomRight.y * qrHeight
+            ),
+            bottomLeft = PointF(
+                pageBoxIdeal.bottomLeft.x * qrWidth,
+                pageBoxIdeal.bottomLeft.y * qrHeight
+            )
         )
 
         // Step 4: Create transform from normalized ideal QR to actual QR (keeps position!)

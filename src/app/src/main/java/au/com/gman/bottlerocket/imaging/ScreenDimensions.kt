@@ -4,7 +4,7 @@ import android.graphics.PointF
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import javax.inject.Inject
 
-class ScreenDimensions @Inject constructor(): IScreenDimensions {
+class ScreenDimensions @Inject constructor() : IScreenDimensions {
     private var imageSize: PointF? = null
     private var previewSize: PointF? = null
     private var screenRotation: Int? = null

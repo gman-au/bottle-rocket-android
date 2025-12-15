@@ -6,7 +6,10 @@ import android.util.AttributeSet
 import android.view.View
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.toPath
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     private val paintRed =
         Paint()
@@ -40,7 +43,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
     fun setQrOverlayPath(box: RocketBoundingBox?) {
         qrCodeBoundingBox = box
         // Invalidate the view to trigger a redraw
-        //postInvalidate()
+        postInvalidate()
     }
 
     fun setImageReferenceBox(box: RocketBoundingBox?) {

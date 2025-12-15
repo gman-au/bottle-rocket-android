@@ -7,28 +7,24 @@ import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import javax.inject.Inject
 import kotlin.collections.get
 
-class QrCodeTemplateMatcher @Inject constructor(): IQrCodeTemplateMatcher {
+class QrCodeTemplateMatcher @Inject constructor() : IQrCodeTemplateMatcher {
 
     val templatesMap = mapOf(
         "04o" to PageTemplate(
             type = "1",
-            // Page dimensions in QR-relative units
-            // If QR is ~50px and page is 500x700px, that's 10x14 QR units
             pageDimensions = RocketBoundingBox(
-                topLeft = PointF(0f, -220f),    // 21.5 QR-widths left, 28 QR-heights up
-                topRight = PointF(350f, -220f),       // at QR X, 28 QR-heights up
-                bottomRight = PointF(350f, 0f),      // at QR position (bottom-right corner)
-                bottomLeft = PointF(0f, 0f)    // 21.5 QR-widths left, at QR Y
+                topLeft = PointF(0f, -220f),
+                topRight = PointF(350f, -220f),
+                bottomRight = PointF(350f, 0f),
+                bottomLeft = PointF(0f, 0f)
             )
         ),
         "P01 V1F T02 S000" to PageTemplate(
             type = "1",
-            // Page dimensions in QR-relative units
-            // If QR is ~50px and page is 500x700px, that's 10x14 QR units
             pageDimensions = RocketBoundingBox(
-                topLeft = PointF(0f, -10f),
-                topRight = PointF(7f, -10f),
-                bottomRight = PointF(7f, 0F),
+                topLeft = PointF(0f, -12F),
+                topRight = PointF(9.5f, -12F),
+                bottomRight = PointF(9.5f, 0F),
                 bottomLeft = PointF(0F, 0F)
             )
         )

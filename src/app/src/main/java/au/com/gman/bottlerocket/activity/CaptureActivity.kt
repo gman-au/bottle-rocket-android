@@ -5,14 +5,19 @@ import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.PointF
+import android.hardware.camera2.CaptureRequest
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Log
+import android.util.Range
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.CaptureRequestOptions
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -24,8 +29,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import au.com.gman.bottlerocket.PageCaptureOverlayView
 import au.com.gman.bottlerocket.R
-import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ITemplateListener
@@ -37,7 +42,6 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.inject.Inject
-import au.com.gman.bottlerocket.BottleRocketApplication.AppConstants
 
 @AndroidEntryPoint
 class CaptureActivity : AppCompatActivity() {
@@ -60,10 +64,6 @@ class CaptureActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
 
     private lateinit var lastMatchedTemplate: BarcodeDetectionResult
-
-    private lateinit var imageBoundingBox: RocketBoundingBox
-
-    private lateinit var previewBoundingBox: RocketBoundingBox
 
     private var imageCapture: ImageCapture? = null
     private var matchFound = false
@@ -94,21 +94,8 @@ class CaptureActivity : AppCompatActivity() {
             finish()
         }
 
-        imageBoundingBox = RocketBoundingBox(
-            0F, 0F,
-            480.0F, 0F,
-            480.0F, 640.0F,
-            0F, 640.0F
-        )
-
-        previewBoundingBox = RocketBoundingBox(
-                0F, 0F,
-            1080.0F, 0F,
-            1080.0F, 2424.0F,
-        0F, 2424.0F
-        )
-
-        barcodeDetector.setListener(object : ITemplateListener {
+        barcodeDetector
+            .setListener(object : ITemplateListener {
             override fun onDetectionSuccess(matchedTemplate: BarcodeDetectionResult) {
                 runOnUiThread {
 
@@ -123,15 +110,14 @@ class CaptureActivity : AppCompatActivity() {
                         when (matchFound) {
                             true -> 0x8000FF00.toInt()
                             false -> 0x80FFA500.toInt()
-                        })
+                        }
+                    )
 
                     lastMatchedTemplate = matchedTemplate
+
                     overlayView.setPageOverlayBox(matchedTemplate.pageOverlayPath)
                     overlayView.setQrOverlayPath(matchedTemplate.qrCodeOverlayPath)
-                    overlayView.setImageReferenceBox(imageBoundingBox)
-                    overlayView.setPreviewReferenceBox(previewBoundingBox)
-
-                    updateDebugText()
+                    //updateDebugText()
                 }
             }
 
@@ -158,60 +144,93 @@ class CaptureActivity : AppCompatActivity() {
         debugText.text = builder.toString()
     }
 
+    @OptIn(ExperimentalCamera2Interop::class)
     private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        val cameraProviderFuture =
+            ProcessCameraProvider
+                .getInstance(this)
 
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
+        cameraProviderFuture
+            .addListener({
+                val cameraProvider =
+                    cameraProviderFuture
+                        .get()
 
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
+                val cameraSelector =
+                    CameraSelector
+                        .DEFAULT_BACK_CAMERA
 
-            imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .setTargetRotation(windowManager.defaultDisplay.rotation)
-                .build()
+                val preview =
+                    Preview
+                        .Builder()
+                        .build()
+                        .also {
+                            it
+                                .setSurfaceProvider(previewView.surfaceProvider)
+                        }
 
-            val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor, barcodeDetector)
-                }
+                imageCapture =
+                    ImageCapture
+                        .Builder()
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .setTargetRotation(windowManager.defaultDisplay.rotation)
+                        .build()
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                val imageAnalyzer =
+                    ImageAnalysis
+                        .Builder()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build()
+                        .also {
+                            it
+                                .setAnalyzer(cameraExecutor, barcodeDetector)
+                        }
 
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageCapture, imageAnalyzer
-                )
+                try {
+                    cameraProvider
+                        .unbindAll()
 
-                Log.d(AppConstants.APPLICATION_LOG_TAG, "previewView (measured): ${previewView.measuredWidth} x ${previewView.measuredHeight}")
-                Log.d(AppConstants.APPLICATION_LOG_TAG, "previewView (actual): ${previewView.width} x ${previewView.height}")
-                Log.d(AppConstants.APPLICATION_LOG_TAG, "overlayView (measured): ${overlayView.measuredWidth} x ${overlayView.measuredHeight}")
-                Log.d(AppConstants.APPLICATION_LOG_TAG, "overlayView (actual): ${overlayView.width} x ${overlayView.height}")
-
-                overlayView.post {
-                    screenDimensions
-                        .setPreviewSize(
-                            PointF(
-                                previewView.measuredWidth.toFloat(),
-                                previewView.measuredHeight.toFloat(),
-                                //overlayView.width.toFloat(),
-                                //overlayView.height.toFloat()
+                    val camera =
+                        cameraProvider
+                            .bindToLifecycle(
+                                this,
+                                cameraSelector,
+                                preview,
+                                imageCapture,
+                                imageAnalyzer
                             )
+
+                    val camera2Control =
+                        Camera2CameraControl
+                            .from(camera.cameraControl)
+
+                    camera2Control
+                        .setCaptureRequestOptions(
+                            CaptureRequestOptions.Builder()
+                                .setCaptureRequestOption(
+                                    CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
+                                    Range(30, 30)
+                                )
+                                .build()
                         )
+
+                    overlayView
+                        .post {
+                            screenDimensions
+                                .setPreviewSize(
+                                    PointF(
+                                        previewView.measuredWidth.toFloat(),
+                                        previewView.measuredHeight.toFloat(),
+                                    )
+                                )
+                        }
+
+                } catch (exc: Exception) {
+                    Toast
+                        .makeText(this, "Camera binding failed", Toast.LENGTH_SHORT).show()
                 }
 
-            } catch (exc: Exception) {
-                Toast.makeText(this, "Camera binding failed", Toast.LENGTH_SHORT).show()
-            }
-
-        }, ContextCompat.getMainExecutor(this))
+            }, ContextCompat.getMainExecutor(this))
     }
 
     private fun takePhoto() {
@@ -223,14 +242,23 @@ class CaptureActivity : AppCompatActivity() {
                 .format(System.currentTimeMillis()) + ".jpg"
         )
 
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        val outputOptions =
+            ImageCapture
+                .OutputFileOptions
+                .Builder(photoFile)
+                .build()
 
-        imageCapture.takePicture(
+        imageCapture
+            .takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
-                    Toast.makeText(baseContext, "Capture failed: ${exc.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        baseContext,
+                        "Capture failed: ${exc.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
@@ -304,7 +332,8 @@ class CaptureActivity : AppCompatActivity() {
             put(MediaStore.Images.Media.DESCRIPTION, "QR: $qrData")
         }
 
-        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        val uri =
+            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
         uri?.let {
             contentResolver.openOutputStream(it)?.use { outputStream ->
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)

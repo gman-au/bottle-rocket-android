@@ -11,23 +11,28 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        super
+            .onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
 
         val beginCaptureButton = findViewById<Button>(R.id.captureButton)
 
         val exitButton = findViewById<Button>(R.id.exitButton)
 
-        beginCaptureButton.setOnClickListener {
-            startActivity(Intent(this, CaptureActivity::class.java))
-        }
+        beginCaptureButton
+            .setOnClickListener {
+                startActivity(Intent(this, CaptureActivity::class.java))
+            }
 
-        exitButton.setOnClickListener {
-            finish()
-        }
+        exitButton
+            .setOnClickListener {
+                finish()
+            }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
+        super
+            .onDestroy()
     }
 }
