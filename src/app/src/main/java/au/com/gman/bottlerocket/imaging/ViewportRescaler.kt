@@ -6,12 +6,15 @@ import android.util.Log
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.interfaces.IViewportRescaler
-import au.com.gman.bottlerocket.BottleRocketApplication.AppConstants
 import au.com.gman.bottlerocket.domain.normalize
 import au.com.gman.bottlerocket.domain.toFloatArray
 import javax.inject.Inject
 
 class ViewportRescaler @Inject constructor() : IViewportRescaler {
+
+    companion object {
+        private const val TAG = "ViewportRescaler"
+    }
 
     override fun calculateScalingFactorWithOffset(
         firstWidth: Float,
@@ -64,61 +67,16 @@ class ViewportRescaler @Inject constructor() : IViewportRescaler {
         }
 
         Log.d(
-            AppConstants.APPLICATION_LOG_TAG,
+            TAG,
             "First: ${actualFirstW}x${actualFirstH} (aspect: ${firstAspect})"
         )
         Log.d(
-            AppConstants.APPLICATION_LOG_TAG,
+            TAG,
             "Second: ${secondWidth}x${secondHeight} (aspect: ${secondAspect})"
         )
-        Log.d(AppConstants.APPLICATION_LOG_TAG, "Scale: ${scale.x}, ${scale.y}")
-        Log.d(AppConstants.APPLICATION_LOG_TAG, "Offset: ${offset.x}, ${offset.y}")
+        Log.d(TAG, "Scale: ${scale.x}, ${scale.y}")
+        Log.d(TAG, "Offset: ${offset.x}, ${offset.y}")
 
         return ScaleAndOffset(scale, offset)
-    }
-
-    override fun calculatePageBounds(
-        qrBoxIdeal: RocketBoundingBox,    // Raw barcode corners (camera space)
-        qrBoxActual: RocketBoundingBox,   // Scaled result (screen space)
-        pageBoxIdeal: RocketBoundingBox   // Template offsets
-    ): RocketBoundingBox {
-
-        // Step 1: Normalize the IDEAL QR to get its shape/size
-        val normalizedQrIdeal = qrBoxIdeal.normalize()
-
-        // Step 2: Calculate QR dimensions
-        val qrWidth = normalizedQrIdeal.topRight.x - normalizedQrIdeal.topLeft.x
-        val qrHeight = normalizedQrIdeal.bottomLeft.y - normalizedQrIdeal.topLeft.y
-
-        // Step 3: Scale page template by QR dimensions
-        val scaledPageIdeal = RocketBoundingBox(
-            topLeft = PointF(pageBoxIdeal.topLeft.x * qrWidth, pageBoxIdeal.topLeft.y * qrHeight),
-            topRight = PointF(
-                pageBoxIdeal.topRight.x * qrWidth,
-                pageBoxIdeal.topRight.y * qrHeight
-            ),
-            bottomRight = PointF(
-                pageBoxIdeal.bottomRight.x * qrWidth,
-                pageBoxIdeal.bottomRight.y * qrHeight
-            ),
-            bottomLeft = PointF(
-                pageBoxIdeal.bottomLeft.x * qrWidth,
-                pageBoxIdeal.bottomLeft.y * qrHeight
-            )
-        )
-
-        // Step 4: Create transform from normalized ideal QR to actual QR (keeps position!)
-        val matrix = Matrix()
-        matrix.setPolyToPoly(
-            normalizedQrIdeal.toFloatArray(), 0,
-            qrBoxActual.toFloatArray(), 0,     // DON'T normalize this!
-            4
-        )
-
-        // Step 5: Apply transform to scaled page
-        val transformedPage = FloatArray(8)
-        matrix.mapPoints(transformedPage, scaledPageIdeal.toFloatArray())
-
-        return RocketBoundingBox(transformedPage)
     }
 }

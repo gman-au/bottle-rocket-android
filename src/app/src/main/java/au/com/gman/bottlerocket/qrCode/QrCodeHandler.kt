@@ -1,12 +1,13 @@
 package au.com.gman.bottlerocket.qrCode
 
 import android.util.Log
-import au.com.gman.bottlerocket.BottleRocketApplication.AppConstants
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.applyRotation
 import au.com.gman.bottlerocket.domain.calculateRotationAngle
+import au.com.gman.bottlerocket.domain.round
 import au.com.gman.bottlerocket.domain.scaleWithOffset
+import au.com.gman.bottlerocket.imaging.PageTemplateRescaler
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
@@ -17,8 +18,14 @@ import javax.inject.Inject
 class QrCodeHandler @Inject constructor(
     private val screenDimensions: IScreenDimensions,
     private val viewportRescaler: IViewportRescaler,
+    private val pageTemplateRescaler: PageTemplateRescaler,
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher
-): IQrCodeHandler {
+) : IQrCodeHandler {
+
+    companion object {
+        private const val TAG = "QrCodeHandler"
+    }
+
     override fun handle(barcode: Barcode?): BarcodeDetectionResult {
         var matchFound = false
         var pageBoundingBox: RocketBoundingBox? = null
@@ -40,7 +47,7 @@ class QrCodeHandler @Inject constructor(
             val rotationDegrees = screenDimensions.getScreenRotation()
 
             Log.d(
-                AppConstants.APPLICATION_LOG_TAG,
+                TAG,
                 buildString {
                     appendLine("imageSize: ${imageSize?.x} x ${imageSize?.y}")
                     appendLine("previewSize: ${previewSize?.x} x ${previewSize?.y}")
@@ -60,7 +67,7 @@ class QrCodeHandler @Inject constructor(
                     )
 
             Log.d(
-                AppConstants.APPLICATION_LOG_TAG,
+                TAG,
                 buildString {
                     appendLine("scalingFactorViewport: $scalingFactorViewport")
                 }
@@ -71,7 +78,7 @@ class QrCodeHandler @Inject constructor(
                     .calculateRotationAngle();
 
             Log.d(
-                AppConstants.APPLICATION_LOG_TAG,
+                TAG,
                 buildString {
                     appendLine("rotationAngle: $rotationAngle")
                 }
@@ -85,15 +92,15 @@ class QrCodeHandler @Inject constructor(
                         .scaleWithOffset(scalingFactorViewport)
 
                 pageBoundingBox =
-                    viewportRescaler
+                    pageTemplateRescaler
                         .calculatePageBounds(
                             qrBoundingBoxUnscaled,
                             qrBoundingBoxScaled,
-                    RocketBoundingBox(pageTemplate.pageDimensions)
+                            RocketBoundingBox(pageTemplate.pageDimensions)
                         )
 
                 Log.d(
-                    AppConstants.APPLICATION_LOG_TAG,
+                    TAG,
                     buildString {
                         appendLine("final qrBoundingBox:")
                         appendLine("$qrBoundingBoxUnscaled")
@@ -114,8 +121,8 @@ class QrCodeHandler @Inject constructor(
             matchFound = matchFound,
             qrCode = qrCode,
             pageTemplate = pageTemplate,
-            pageOverlayPath = pageBoundingBox,
-            qrCodeOverlayPath = qrBoundingBoxScaled
+            pageOverlayPath = pageBoundingBox?.round(),
+            qrCodeOverlayPath = qrBoundingBoxScaled?.round()
         )
     }
 }

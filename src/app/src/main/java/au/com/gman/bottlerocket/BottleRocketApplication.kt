@@ -14,8 +14,4 @@ class BottleRocketApplication : Application() {
     companion object {
         // You can add a static instance for easy access if needed
     }
-
-    object AppConstants {
-        const val APPLICATION_LOG_TAG = "BOTTLE_ROCKET"
-    }
 }

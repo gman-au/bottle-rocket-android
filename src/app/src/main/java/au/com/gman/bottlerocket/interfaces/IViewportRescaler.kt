@@ -11,10 +11,4 @@ interface IViewportRescaler {
         secondHeight: Float,
         rotationAngle: Int
     ): ScaleAndOffset
-
-    fun calculatePageBounds(
-        qrBoxIdeal: RocketBoundingBox,
-        qrBoxActual: RocketBoundingBox,
-        pageBoxIdeal: RocketBoundingBox
-    ): RocketBoundingBox
 }

@@ -8,6 +8,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import androidx.core.graphics.toPointF
 import kotlin.math.atan2
+import kotlin.math.roundToInt
 
 data class RocketBoundingBox(
     val topLeft: PointF,
@@ -162,6 +163,15 @@ fun RocketBoundingBox.normalize(): RocketBoundingBox {
         topRight = PointF(topRight.x - minX, topRight.y - minY),
         bottomRight = PointF(bottomRight.x - minX, bottomRight.y - minY),
         bottomLeft = PointF(bottomLeft.x - minX, bottomLeft.y - minY)
+    )
+}
+
+fun RocketBoundingBox.round(): RocketBoundingBox {
+    return RocketBoundingBox(
+        topLeft = Point(topLeft.x.roundToInt(), topLeft.y.roundToInt()).toPointF(),
+        topRight = Point(topRight.x.roundToInt(), topRight.y.roundToInt()).toPointF(),
+        bottomRight = Point(bottomRight.x.roundToInt(), bottomRight.y.roundToInt()).toPointF(),
+        bottomLeft = Point(bottomLeft.x.roundToInt(), bottomLeft.y.roundToInt()).toPointF()
     )
 }
 
