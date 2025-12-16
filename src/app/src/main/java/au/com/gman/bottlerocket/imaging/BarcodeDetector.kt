@@ -7,7 +7,9 @@ import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ITemplateListener
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import javax.inject.Inject
 
@@ -16,9 +18,19 @@ class BarcodeDetector @Inject constructor(
     private val screenDimensions: IScreenDimensions
 ) : IBarcodeDetector {
 
+    private val scannerOptions:
+        BarcodeScannerOptions =
+            BarcodeScannerOptions
+                .Builder()
+                .setBarcodeFormats(
+                    Barcode.FORMAT_QR_CODE,
+                    Barcode.FORMAT_AZTEC
+                )
+                .build()
+
     private val scanner =
         BarcodeScanning
-            .getClient()
+            .getClient(scannerOptions)
 
     private var listener: ITemplateListener? = null
 

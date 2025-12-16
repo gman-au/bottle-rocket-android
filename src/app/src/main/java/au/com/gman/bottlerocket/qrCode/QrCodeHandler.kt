@@ -1,6 +1,7 @@
 package au.com.gman.bottlerocket.qrCode
 
 import android.util.Log
+import au.com.gman.bottlerocket.BottleRocketApplication
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.calculateRotationAngle
@@ -18,7 +19,6 @@ import javax.inject.Inject
 
 class QrCodeHandler @Inject constructor(
     private val screenDimensions: IScreenDimensions,
-    private val viewportRescaler: IViewportRescaler,
     private val pageTemplateRescaler: PageTemplateRescaler,
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
     private val boundingBoxValidator: IBoundingBoxValidator
@@ -26,6 +26,9 @@ class QrCodeHandler @Inject constructor(
 
     companion object {
         private const val TAG = "QrCodeHandler"
+
+        private const val USE_SMOOTHING = !BottleRocketApplication.USE_SMOOTHING
+        private const val USE_VALIDATION = !BottleRocketApplication.USE_VALIDATION
     }
 
     private val qrStabilizer = BoundingBoxStabilizer(0.15f, 3)
@@ -47,56 +50,27 @@ class QrCodeHandler @Inject constructor(
             qrCode = barcode.rawValue
             val rawQrBounds = RocketBoundingBox(barcode.cornerPoints)
 
-            qrBoundingBoxUnscaled =
-                qrStabilizer
+            qrBoundingBoxUnscaled = when (USE_SMOOTHING) {
+                true -> qrStabilizer
                     .stabilize(rawQrBounds)
+                false -> rawQrBounds
+            }
 
             if (!screenDimensions.isInitialised())
                 throw IllegalStateException("Screen dimensions not initialised")
 
-            val imageSize = screenDimensions.getImageSize()
-            val previewSize = screenDimensions.getPreviewSize()
-            val rotationDegrees = screenDimensions.getScreenRotation()
+            screenDimensions
+                .recalculateScalingFactorIfRequired()
 
-            Log.d(
-                TAG,
-                buildString {
-                    appendLine("imageSize: ${imageSize?.x} x ${imageSize?.y}")
-                    appendLine("previewSize: ${previewSize?.x} x ${previewSize?.y}")
-                    appendLine("rotationDegrees: $rotationDegrees")
-                }
-            )
-
-            // the first scale factor is the viewport vs the preview
             val scalingFactorViewport =
-                viewportRescaler
-                    .calculateScalingFactorWithOffset(
-                        firstWidth = imageSize!!.x,
-                        firstHeight = imageSize.y,
-                        secondWidth = previewSize!!.x,
-                        secondHeight = previewSize.y,
-                        rotationAngle = rotationDegrees!!
-                    )
-
-            Log.d(
-                TAG,
-                buildString {
-                    appendLine("scalingFactorViewport: $scalingFactorViewport")
-                }
-            )
+                screenDimensions
+                    .getScalingFactor()
 
             val rotationAngle =
                 qrBoundingBoxUnscaled
-                    .calculateRotationAngle();
+                    .calculateRotationAngle()
 
-            Log.d(
-                TAG,
-                buildString {
-                    appendLine("rotationAngle: $rotationAngle")
-                }
-            )
-
-            if (pageTemplate != null) {
+            if (pageTemplate != null && scalingFactorViewport != null) {
 
                 qrBoundingBoxScaled =
                     qrBoundingBoxUnscaled
@@ -106,20 +80,27 @@ class QrCodeHandler @Inject constructor(
                     pageTemplateRescaler
                         .calculatePageBounds(
                             qrBoundingBoxUnscaled,
-                            qrBoundingBoxScaled,
-                            RocketBoundingBox(pageTemplate.pageDimensions)
+                            RocketBoundingBox(pageTemplate.pageDimensions),
+                            rotationAngle
                         )
 
+                val scaledPageBounds =
+                    rawPageBounds
+                        .scaleWithOffset(scalingFactorViewport)
+
                 // Stabilize page bounds
-                val stabilizedPageBounds =
-                    pageStabilizer
-                        .stabilize(rawPageBounds)
+                val stabilizedPageBounds = when (USE_SMOOTHING) {
+                    true -> pageStabilizer.stabilize(scaledPageBounds)
+                    false -> scaledPageBounds
+                }
 
                 matchFound = qrStabilizer.isStable() && pageStabilizer.isStable()
 
                 // Validate the page bounds
-                val isValid = boundingBoxValidator.isValid(stabilizedPageBounds)
-                val isStable = qrStabilizer.isStable() && pageStabilizer.isStable()
+                val isValid =
+                    boundingBoxValidator.isValid(stabilizedPageBounds) || !USE_VALIDATION
+                val isStable =
+                    (qrStabilizer.isStable() && pageStabilizer.isStable()) || !USE_SMOOTHING
 
                 if (isValid && isStable) {
                     // Only show page overlay when valid
@@ -136,6 +117,14 @@ class QrCodeHandler @Inject constructor(
                     buildString {
                         appendLine("final qrBoundingBox:")
                         appendLine("$qrBoundingBoxUnscaled")
+                    }
+                )
+
+                Log.d(
+                    TAG,
+                    buildString {
+                        appendLine("final stabilizedPageBounds:")
+                        appendLine("$stabilizedPageBounds")
                     }
                 )
             } else {

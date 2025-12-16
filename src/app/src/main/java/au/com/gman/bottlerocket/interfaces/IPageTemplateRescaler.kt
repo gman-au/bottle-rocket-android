@@ -5,7 +5,7 @@ import au.com.gman.bottlerocket.domain.RocketBoundingBox
 interface IPageTemplateRescaler {
     fun calculatePageBounds(
         qrBoxIdeal: RocketBoundingBox,
-        qrBoxActual: RocketBoundingBox,
-        pageBoxIdeal: RocketBoundingBox
+        pageBoxIdeal: RocketBoundingBox,
+        rotationAngle: Float
     ): RocketBoundingBox
 }
