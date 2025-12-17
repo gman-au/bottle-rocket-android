@@ -6,8 +6,9 @@ import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.calculateRotationAngle
 import au.com.gman.bottlerocket.domain.round
 import au.com.gman.bottlerocket.domain.scaleWithOffset
-import au.com.gman.bottlerocket.imaging.BoundingBoxStabilizer
 import au.com.gman.bottlerocket.imaging.PageTemplateRescaler
+import au.com.gman.bottlerocket.imaging.RocketBoundingBoxMedianFilter
+import au.com.gman.bottlerocket.imaging.aggressiveSmooth
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
@@ -24,15 +25,18 @@ class QrCodeHandler @Inject constructor(
         private const val TAG = "QrCodeHandler"
     }
 
-    private val qrStabilizer = BoundingBoxStabilizer(0.15f, 3)
-    private val pageStabilizer = BoundingBoxStabilizer(0.15f, 3)
+    // Option 1: Track previous frame for temporal smoothing AFTER homography
+    private var previousPageBounds: RocketBoundingBox? = null
+
+    // Option 2: Median filter (uncomment to use instead of temporal smoothing)
+    private val medianFilter = RocketBoundingBoxMedianFilter(bufferSize = 50)
 
     override fun handle(barcode: Barcode?): BarcodeDetectionResult {
         var matchFound = false
         var pageBoundingBox: RocketBoundingBox? = null
-        var qrBoundingBoxUnscaled: RocketBoundingBox? = null
-        var qrBoundingBoxScaled: RocketBoundingBox? = null
-        var qrCode: String? = null
+        var qrCornerPointsBoxUnscaled: RocketBoundingBox? = null
+        var qrCornerPointsBoxScaled: RocketBoundingBox? = null
+        var qrCodeValue: String? = null
         var validationMessage: String? = null
 
         val pageTemplate =
@@ -40,11 +44,13 @@ class QrCodeHandler @Inject constructor(
                 .tryMatch(barcode?.rawValue ?: "")
 
         if (barcode != null) {
-            qrCode = barcode.rawValue
+            qrCodeValue = barcode.rawValue
 
             val qrCornerPoints = RocketBoundingBox(barcode.cornerPoints)
 
-            qrBoundingBoxUnscaled = qrCornerPoints
+            // Use raw corner points - don't stabilize the input
+            // The homography amplifies tiny movements, so we stabilize AFTER
+            qrCornerPointsBoxUnscaled = qrCornerPoints
 
             if (!screenDimensions.isInitialised())
                 throw IllegalStateException("Screen dimensions not initialised")
@@ -57,19 +63,35 @@ class QrCodeHandler @Inject constructor(
                     .getScalingFactor()
 
             val rotationAngle =
-                qrBoundingBoxUnscaled
+                qrCornerPointsBoxUnscaled
                     .calculateRotationAngle()
 
             if (pageTemplate != null && scalingFactorViewport != null) {
 
-                qrBoundingBoxScaled =
-                    qrBoundingBoxUnscaled
+                qrCornerPointsBoxScaled =
+                    qrCornerPointsBoxUnscaled
                         .scaleWithOffset(scalingFactorViewport)
+
+                Log.d(
+                    TAG,
+                    buildString {
+                        appendLine("qrBoundingBoxUnscaled:")
+                        appendLine("$qrCornerPointsBoxUnscaled")
+                    }
+                )
+
+                Log.d(
+                    TAG,
+                    buildString {
+                        appendLine("qrBoundingBoxScaled:")
+                        appendLine("$qrCornerPointsBoxScaled")
+                    }
+                )
 
                 val rawPageBounds =
                     pageTemplateRescaler
                         .calculatePageBounds(
-                            qrBoundingBoxUnscaled,
+                            qrCornerPointsBoxUnscaled,
                             RocketBoundingBox(pageTemplate.pageDimensions),
                             rotationAngle
                         )
@@ -78,16 +100,20 @@ class QrCodeHandler @Inject constructor(
                     rawPageBounds
                         .scaleWithOffset(scalingFactorViewport)
 
-                pageBoundingBox = scaledPageBounds
-                matchFound = true
-
-                Log.d(
-                    TAG,
-                    buildString {
-                        appendLine("final qrBoundingBox:")
-                        appendLine("$qrBoundingBoxUnscaled")
-                    }
+                // OPTION 1: Aggressive smoothing with complete outlier rejection
+                pageBoundingBox = scaledPageBounds.aggressiveSmooth(
+                    previous = previousPageBounds,
+                    smoothFactor = 0.9f,        // 90% previous, 10% current
+                    maxJumpThreshold = 50f      // Completely reject frames with ANY corner jumping >50px
                 )
+
+                // OPTION 2: Median filter (uncomment to try - most stable but slight lag)
+                pageBoundingBox = medianFilter.add(scaledPageBounds)
+
+                // Store for next frame (Option 1 only)
+                previousPageBounds = pageBoundingBox
+
+                matchFound = true
 
                 Log.d(
                     TAG,
@@ -97,19 +123,22 @@ class QrCodeHandler @Inject constructor(
                     }
                 )
             } else {
-                pageStabilizer.reset()
+                // Reset when we lose tracking
+                previousPageBounds = null
+                // medianFilter.reset() // Uncomment if using Option 2
             }
         } else {
-            qrStabilizer.reset()
-            pageStabilizer.reset()
+            // Reset when no barcode detected
+            previousPageBounds = null
+            // medianFilter.reset() // Uncomment if using Option 2
         }
 
         return BarcodeDetectionResult(
             matchFound = matchFound,
-            qrCode = qrCode,
+            qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBox?.round(),
-            qrCodeOverlayPath = qrBoundingBoxScaled?.round(),
+            qrCodeOverlayPath = qrCornerPointsBoxScaled?.round(),
             validationMessage = validationMessage
         )
     }

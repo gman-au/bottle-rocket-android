@@ -70,10 +70,10 @@ data class RocketBoundingBox(
     )
 
     override fun toString(): String = buildString {
-        appendLine("[1]: ${topLeft.x}, ${topLeft.y}")
-        appendLine("[2]: ${topRight.x}, ${topRight.y}")
-        appendLine("[3]: ${bottomRight.x}, ${bottomRight.y}")
-        appendLine("[4]: ${bottomLeft.x}, ${bottomLeft.y}")
+        appendLine("${topLeft.x}F, ${topLeft.y}F,")
+        appendLine("${topRight.x}F, ${topRight.y}F,")
+        appendLine("${bottomRight.x}F, ${bottomRight.y}F,")
+        appendLine("${bottomLeft.x}F, ${bottomLeft.y}F")
     }
 
 }
