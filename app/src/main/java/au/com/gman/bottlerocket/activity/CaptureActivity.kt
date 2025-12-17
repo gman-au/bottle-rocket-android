@@ -228,7 +228,7 @@ class CaptureActivity : AppCompatActivity() {
                     overlayView
                         .post {
                             screenDimensions
-                                .setPreviewSize(
+                                .setTargetSize(
                                     PointF(
                                         previewView.measuredWidth.toFloat(),
                                         previewView.measuredHeight.toFloat(),

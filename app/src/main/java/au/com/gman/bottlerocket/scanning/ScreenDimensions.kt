@@ -15,26 +15,34 @@ class ScreenDimensions @Inject constructor(
         private const val TAG = "ScreenDimensions"
     }
 
-    private var imageSize: PointF? = null
-    private var previewSize: PointF? = null
+    private var sourceSize: PointF? = null
+    private var targetSize: PointF? = null
     private var screenRotation: Int? = null
 
     private var hasChanged: Boolean = true
 
     private var scaleAndOffset: ScaleAndOffset? = null
 
-    override fun setImageSize(size: PointF?) {
-        if (imageSize?.x != size?.x || imageSize?.y != size?.y) {
-            imageSize = size
+    override fun setSourceSize(size: PointF?) {
+        if (sourceSize?.x != size?.x || sourceSize?.y != size?.y) {
+            sourceSize = size
             hasChanged = true
         }
     }
 
-    override fun setPreviewSize(size: PointF?) {
-        if (previewSize?.x != size?.x || previewSize?.y != size?.y) {
-            previewSize = size
+    override fun setTargetSize(size: PointF?) {
+        if (targetSize?.x != size?.x || targetSize?.y != size?.y) {
+            targetSize = size
             hasChanged = true
         }
+    }
+
+    override fun getSourceSize(): PointF? {
+        return sourceSize
+    }
+
+    override fun getTargetSize(): PointF? {
+        return targetSize
     }
 
     override fun setScreenRotation(angle: Int?) {
@@ -48,8 +56,12 @@ class ScreenDimensions @Inject constructor(
         return scaleAndOffset
     }
 
+    override fun getScreenRotation(): Float {
+        return screenRotation?.toFloat() ?: 0F
+    }
+
     override fun isInitialised(): Boolean {
-        return (imageSize != null && previewSize != null && screenRotation != null)
+        return (sourceSize != null && targetSize != null && screenRotation != null)
     }
 
     override fun recalculateScalingFactorIfRequired() {
@@ -57,13 +69,16 @@ class ScreenDimensions @Inject constructor(
             scaleAndOffset =
                 viewportRescaler
                     .calculateScalingFactorWithOffset(
-                        firstWidth = imageSize!!.x,
-                        firstHeight = imageSize!!.y,
-                        secondWidth = previewSize!!.x,
-                        secondHeight = previewSize!!.y,
+                        sourceWidth = sourceSize!!.x,
+                        sourceHeight = sourceSize!!.y,
+                        targetWidth = targetSize!!.x,
+                        targetHeight = targetSize!!.y,
                         rotationAngle = screenRotation!!
                     )
-            Log.d(TAG, "Re-computed scaling factor:${scaleAndOffset?.scale?.x}, ${scaleAndOffset?.scale?.y}")
+            Log.d(
+                TAG,
+                "Re-computed scaling factor:${scaleAndOffset?.scale?.x}, ${scaleAndOffset?.scale?.y}"
+            )
             hasChanged = false
         }
     }

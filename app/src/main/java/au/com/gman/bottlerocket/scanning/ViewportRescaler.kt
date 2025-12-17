@@ -13,23 +13,23 @@ class ViewportRescaler @Inject constructor() : IViewportRescaler {
     }
 
     override fun calculateScalingFactorWithOffset(
-        firstWidth: Float,
-        firstHeight: Float,
-        secondWidth: Float,
-        secondHeight: Float,
+        sourceWidth: Float,
+        sourceHeight: Float,
+        targetWidth: Float,
+        targetHeight: Float,
         rotationAngle: Int
     ): ScaleAndOffset {
 
         // Account for rotation - swap dimensions if rotated 90° or 270°
         val (actualFirstW, actualFirstH) = if (rotationAngle % 180 != 0) {
-            Pair(firstHeight, firstWidth)
+            Pair(sourceHeight, sourceWidth)
         } else {
-            Pair(firstWidth, firstHeight)
+            Pair(sourceWidth, sourceHeight)
         }
 
         // Calculate aspect ratios
         val firstAspect = actualFirstW / actualFirstH
-        val secondAspect = secondWidth / secondHeight
+        val secondAspect = targetWidth / targetHeight
 
         val scale: PointF
         val offset: PointF
@@ -37,12 +37,12 @@ class ViewportRescaler @Inject constructor() : IViewportRescaler {
         if (firstAspect > secondAspect) {
             // First is wider - horizontal crop (left/right sides cut off)
             // Scale based on height
-            val uniformScale = secondHeight / actualFirstH
+            val uniformScale = targetHeight / actualFirstH
             scale = PointF(uniformScale, uniformScale)
 
             // Calculate how much width is cropped
             val scaledWidth = actualFirstW * uniformScale
-            val cropAmount = (scaledWidth - secondWidth) / 2f
+            val cropAmount = (scaledWidth - targetWidth) / 2f
 
             // The crop happens in the FIRST coordinate space, then scaled
             val cropInFirstSpace = cropAmount / uniformScale
@@ -51,12 +51,12 @@ class ViewportRescaler @Inject constructor() : IViewportRescaler {
         } else {
             // First is taller - vertical crop (top/bottom cut off)
             // Scale based on width
-            val uniformScale = secondWidth / actualFirstW
+            val uniformScale = targetWidth / actualFirstW
             scale = PointF(uniformScale, uniformScale)
 
             // Calculate how much height is cropped
             val scaledHeight = actualFirstH * uniformScale
-            val cropAmount = (scaledHeight - secondHeight) / 2f
+            val cropAmount = (scaledHeight - targetHeight) / 2f
 
             val cropInFirstSpace = cropAmount / uniformScale
             offset = PointF(0f, -cropInFirstSpace * uniformScale)
@@ -68,7 +68,7 @@ class ViewportRescaler @Inject constructor() : IViewportRescaler {
         )
         Log.d(
             TAG,
-            "Second: ${secondWidth}x${secondHeight} (aspect: ${secondAspect})"
+            "Second: ${targetWidth}x${targetHeight} (aspect: ${secondAspect})"
         )
         Log.d(TAG, "Scale: ${scale.x}, ${scale.y}")
         Log.d(TAG, "Offset: ${offset.x}, ${offset.y}")

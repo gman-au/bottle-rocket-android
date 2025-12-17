@@ -67,7 +67,7 @@ class BarcodeDetector @Inject constructor(
                     .rotationDegrees
 
             screenDimensions
-                .setImageSize(
+                .setSourceSize(
                     PointF(
                         imageWidth.toFloat(),
                         imageHeight.toFloat()

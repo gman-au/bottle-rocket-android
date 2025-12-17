@@ -4,10 +4,10 @@ import au.com.gman.bottlerocket.domain.ScaleAndOffset
 
 interface IViewportRescaler {
      fun calculateScalingFactorWithOffset(
-        firstWidth: Float,
-        firstHeight: Float,
-        secondWidth: Float,
-        secondHeight: Float,
-        rotationAngle: Int
+         sourceWidth: Float,
+         sourceHeight: Float,
+         targetWidth: Float,
+         targetHeight: Float,
+         rotationAngle: Int
     ): ScaleAndOffset
 }

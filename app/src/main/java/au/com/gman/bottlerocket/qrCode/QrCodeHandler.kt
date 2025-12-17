@@ -3,10 +3,11 @@ package au.com.gman.bottlerocket.qrCode
 import android.util.Log
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
+import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
 import au.com.gman.bottlerocket.extensions.calculateRotationAngle
 import au.com.gman.bottlerocket.extensions.round
-import au.com.gman.bottlerocket.extensions.scaleWithOffset
+import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
@@ -35,6 +36,9 @@ class QrCodeHandler @Inject constructor(
         var qrCornerPointsBoxScaled: RocketBoundingBox? = null
         var qrCodeValue: String? = null
         var validationMessage: String? = null
+        var cameraRotation: Float = 0F
+        var boundingBoxRotation: Float = 0F
+        var scalingFactorViewport: ScaleAndOffset? = null
 
         val pageTemplate =
             qrCodeTemplateMatcher
@@ -55,24 +59,28 @@ class QrCodeHandler @Inject constructor(
             screenDimensions
                 .recalculateScalingFactorIfRequired()
 
-            val scalingFactorViewport =
+            scalingFactorViewport =
                 screenDimensions
                     .getScalingFactor()
 
-            val rotationAngle =
+            boundingBoxRotation =
                 qrCornerPointsBoxUnscaled
                     .calculateRotationAngle()
+
+            cameraRotation =
+                screenDimensions
+                    .getScreenRotation()
 
             if (pageTemplate != null && scalingFactorViewport != null) {
 
                 qrCornerPointsBoxScaled =
                     qrCornerPointsBoxUnscaled
-                        .scaleWithOffset(scalingFactorViewport)
+                        .scaleUpWithOffset(scalingFactorViewport)
 
                 Log.d(
                     TAG,
                     buildString {
-                        appendLine("qrBoundingBoxUnscaled:")
+                        appendLine("qrCornerPointsBoxUnscaled:")
                         appendLine("$qrCornerPointsBoxUnscaled")
                     }
                 )
@@ -80,7 +88,7 @@ class QrCodeHandler @Inject constructor(
                 Log.d(
                     TAG,
                     buildString {
-                        appendLine("qrBoundingBoxScaled:")
+                        appendLine("qrCornerPointsBoxScaled:")
                         appendLine("$qrCornerPointsBoxScaled")
                     }
                 )
@@ -92,10 +100,9 @@ class QrCodeHandler @Inject constructor(
                             RocketBoundingBox(pageTemplate.pageDimensions)
                         )
 
-
                 val scaledPageBounds =
                     rawPageBounds
-                        .scaleWithOffset(scalingFactorViewport)
+                        .scaleUpWithOffset(scalingFactorViewport)
 
                 pageBoundingBox =
                     scaledPageBounds
@@ -137,7 +144,10 @@ class QrCodeHandler @Inject constructor(
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBox?.round(),
             qrCodeOverlayPath = qrCornerPointsBoxScaled?.round(),
-            validationMessage = validationMessage
+            validationMessage = validationMessage,
+            cameraRotation = cameraRotation,
+            boundingBoxRotation = boundingBoxRotation,
+            scalingFactor = scalingFactorViewport
         )
     }
 }

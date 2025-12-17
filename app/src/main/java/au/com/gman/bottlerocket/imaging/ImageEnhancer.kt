@@ -2,30 +2,109 @@ package au.com.gman.bottlerocket.imaging
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Rect
-import android.util.Log
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
-import au.com.gman.bottlerocket.domain.QrTemplateInfo
-import au.com.gman.bottlerocket.extensions.toRect
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
+import au.com.gman.bottlerocket.extensions.applyRotation
+import au.com.gman.bottlerocket.extensions.rotateAroundCenter
+import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
+import au.com.gman.bottlerocket.extensions.toPath
 import au.com.gman.bottlerocket.interfaces.IImageEnhancer
+import au.com.gman.bottlerocket.interfaces.IScreenDimensions
+import au.com.gman.bottlerocket.interfaces.IViewportRescaler
+import au.com.gman.bottlerocket.scanning.ViewportRescaler
 import javax.inject.Inject
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.math.roundToInt
 
-class ImageEnhancer @Inject constructor() : IImageEnhancer {
+class ImageEnhancer @Inject constructor(
+    private val viewportRescaler: IViewportRescaler,
+    private val screenDimensions: IScreenDimensions
+) : IImageEnhancer {
 
     companion object {
         private const val TAG = "ImageEnhancer"
     }
 
-    override fun enhanceImage(bitmap: Bitmap): Bitmap {
+    override fun processImageWithMatchedTemplate(
+        bitmap: Bitmap,
+        detectionResult: BarcodeDetectionResult
+    ): Bitmap? {
+
+        if (!detectionResult.matchFound ||
+            detectionResult.pageOverlayPath == null ||
+            detectionResult.pageTemplate == null
+        ) {
+            return null
+        }
+
+        val totalRotation = detectionResult.cameraRotation - detectionResult.boundingBoxRotation
+
+        val rotatedBitmap =
+            bitmap
+                .rotate(totalRotation)
+
+        var bitmapScalingFactor =
+            viewportRescaler
+                .calculateScalingFactorWithOffset(
+                    sourceWidth = screenDimensions.getTargetSize()!!.x,
+                    sourceHeight = screenDimensions.getTargetSize()!!.y,
+                    targetWidth = rotatedBitmap.width.toFloat(),
+                    targetHeight = rotatedBitmap.height.toFloat(),
+                    0
+                )
+
+        bitmapScalingFactor = detectionResult.scalingFactor!!
+
+        var overlayToDraw = detectionResult.pageOverlayPath
+        //overlayToDraw = overlayToDraw.applyRotation(-detectionResult.boundingBoxRotation)
+
+        /*overlayToDraw =
+            detectionResult
+                .pageOverlayPath
+                .rotateAroundCenter(
+                    degrees = totalRotation,
+                    bitmapWidth = bitmap.width,
+                    bitmapHeight = bitmap.height
+                )*/
+
+        overlayToDraw = overlayToDraw.scaleUpWithOffset(bitmapScalingFactor)
+
+        val correctedBitmap =
+            rotatedBitmap
+        /*.extractPageWithPerspective(
+            pageBounds = rotatedPageBounds,
+            targetDimensions = detectionResult.pageTemplate.pageDimensions
+        )*/
+
+        val enhancedBitmap =
+            correctedBitmap
+                .enhanceImage(
+                    detectionResult.qrCodeOverlayPath,
+                    overlayToDraw
+                )
+
+
+        var pageTemplateBox = detectionResult.pageOverlayPath
+
+        return enhancedBitmap
+    }
+
+    private fun Bitmap.rotate(degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
+    }
+
+    private fun Bitmap.enhanceImage(
+        qrBoundingBox: RocketBoundingBox? = null,
+        pageBoundingBox: RocketBoundingBox? = null,
+    ): Bitmap {
 
         val enhanced =
-            bitmap
+            this
                 .copy(Bitmap.Config.ARGB_8888, true)
 
         val contrastFactor = 1.2f
@@ -47,240 +126,97 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
 
         canvas
             .drawBitmap(
-                bitmap,
+                this,
                 0f,
                 0f,
                 paint
             )
 
+        var debugPaint = Paint()
+            .apply {
+                color = Color.RED
+                style = Paint.Style.STROKE
+                strokeWidth = 8f
+            }
+
+        if (qrBoundingBox != null)
+            canvas.drawPath(qrBoundingBox.toPath(), debugPaint)
+
+        if (pageBoundingBox != null)
+            canvas.drawPath(pageBoundingBox.toPath(), debugPaint)
+
         return enhanced
     }
 
-    override fun processImageWithMatchedTemplate(
-        bitmap: Bitmap,
-        detectionResult: BarcodeDetectionResult
-    ): Bitmap? {
-
-        if (!detectionResult.matchFound) return null
-
-        if (detectionResult.pageOverlayPath == null) {
-            Log.w(TAG, "No page bounding box provided")
-            return null
-        }
-
-        var pageTemplateBox = detectionResult.pageOverlayPath
-
-        return cropFromQRPosition(bitmap, pageTemplateBox.toRect(), 500, 500, "UP_RIGHT")
-    }
-
-    private fun cropFromQRPosition(
-        bitmap: Bitmap,
-        qrBox: Rect,
-        width: Int,
-        height: Int,
-        direction: String
+    fun Bitmap.extractPageWithPerspective(
+        pageBounds: RocketBoundingBox,
+        outputWidth: Int,
+        outputHeight: Int
     ): Bitmap {
-        // Calculate crop region based on direction
-        val cropRect = when (direction) {
-            "UP_LEFT" -> {
-                // Box extends up and left from QR
-                val left = max(0, qrBox.left - width)
-                val top = max(0, qrBox.top - height)
-                val right = min(bitmap.width, qrBox.left)
-                val bottom = min(bitmap.height, qrBox.top)
-                Rect(left, top, right, bottom)
-            }
-
-            "UP_RIGHT" -> {
-                val left = max(0, qrBox.right)
-                val top = max(0, qrBox.top - height)
-                val right = min(bitmap.width, qrBox.right + width)
-                val bottom = min(bitmap.height, qrBox.top)
-                Rect(left, top, right, bottom)
-            }
-
-            "DOWN_LEFT" -> {
-                val left = max(0, qrBox.left - width)
-                val top = max(0, qrBox.bottom)
-                val right = min(bitmap.width, qrBox.left)
-                val bottom = min(bitmap.height, qrBox.bottom + height)
-                Rect(left, top, right, bottom)
-            }
-
-            "DOWN_RIGHT" -> {
-                val left = max(0, qrBox.right)
-                val top = max(0, qrBox.bottom)
-                val right = min(bitmap.width, qrBox.right + width)
-                val bottom = min(bitmap.height, qrBox.bottom + height)
-                Rect(left, top, right, bottom)
-            }
-
-            else -> return bitmap
-        }
-
-        Log.d(TAG, "Cropping $direction: QR at (${qrBox.left},${qrBox.top}), Crop: $cropRect")
-
-        // Validate crop dimensions
-        if (cropRect.width() <= 0 || cropRect.height() <= 0) {
-            Log.w(TAG, "Invalid crop dimensions, returning original")
-            return bitmap
-        }
-
-        // Crop the bitmap
-        val croppedBitmap = Bitmap.createBitmap(
-            bitmap,
-            cropRect.left,
-            cropRect.top,
-            cropRect.width(),
-            cropRect.height()
+        // Source corners (the distorted quadrilateral in the original image)
+        val srcCorners = floatArrayOf(
+            pageBounds.topLeft.x, pageBounds.topLeft.y,
+            pageBounds.topRight.x, pageBounds.topRight.y,
+            pageBounds.bottomRight.x, pageBounds.bottomRight.y,
+            pageBounds.bottomLeft.x, pageBounds.bottomLeft.y
         )
 
-        // Scale to exact size if needed
-        val scaledBitmap = if (croppedBitmap.width != width || croppedBitmap.height != height) {
-            Bitmap.createScaledBitmap(croppedBitmap, width, height, true)
-        } else {
-            croppedBitmap
-        }
-
-        // Enhance and return
-        return enhanceImage(scaledBitmap)
-    }
-
-    private fun cropPageFromBottomLeft(
-        bitmap: Bitmap,
-        qrBox: Rect,
-        templateInfo: QrTemplateInfo
-    ): Bitmap {
-        // Estimate page dimensions based on QR size
-        // Typical Rocketbook QR is about 0.5" square on an 8.5x11" page
-        val qrSizePixels = qrBox.width()
-        val estimatedPageWidthPixels = (qrSizePixels * 17).toInt() // 8.5" / 0.5"
-        val estimatedPageHeightPixels = (qrSizePixels * 22).toInt() // 11" / 0.5"
-
-        // Page extends up and to the right from QR position
-        val pageLeft = max(0, qrBox.left - (qrSizePixels * 2)) // Small margin
-        val pageTop = max(0, qrBox.top - estimatedPageHeightPixels + (qrSizePixels * 2))
-        val pageRight = min(bitmap.width, pageLeft + estimatedPageWidthPixels)
-        val pageBottom = min(bitmap.height, qrBox.bottom + (qrSizePixels * 2))
-
-        val cropRect = Rect(pageLeft, pageTop, pageRight, pageBottom)
-
-        Log.d(TAG, "Page crop (bottom-left): $cropRect")
-
-        if (cropRect.width() <= 0 || cropRect.height() <= 0) {
-            return bitmap
-        }
-
-        val croppedBitmap = Bitmap.createBitmap(
-            bitmap,
-            cropRect.left,
-            cropRect.top,
-            cropRect.width(),
-            cropRect.height()
+        // Destination corners (rectangle in output image)
+        val dstCorners = floatArrayOf(
+            0f, 0f,                             // top-left
+            outputWidth.toFloat(), 0f,          // top-right
+            outputWidth.toFloat(), outputHeight.toFloat(), // bottom-right
+            0f, outputHeight.toFloat()          // bottom-left
         )
 
-        return enhanceImage(croppedBitmap)
-    }
-
-    private fun cropPageFromBottomRight(
-        bitmap: Bitmap,
-        qrBox: Rect,
-        templateInfo: QrTemplateInfo
-    ): Bitmap {
-        val qrSizePixels = qrBox.width()
-        val estimatedPageWidthPixels = (qrSizePixels * 17).toInt()
-        val estimatedPageHeightPixels = (qrSizePixels * 22).toInt()
-
-        // Page extends up and to the left from QR position
-        val pageRight = min(bitmap.width, qrBox.right + (qrSizePixels * 2))
-        val pageLeft = max(0, pageRight - estimatedPageWidthPixels)
-        val pageTop = max(0, qrBox.top - estimatedPageHeightPixels + (qrSizePixels * 2))
-        val pageBottom = min(bitmap.height, qrBox.bottom + (qrSizePixels * 2))
-
-        val cropRect = Rect(pageLeft, pageTop, pageRight, pageBottom)
-
-        Log.d(TAG, "Page crop (bottom-right): $cropRect")
-
-        if (cropRect.width() <= 0 || cropRect.height() <= 0) {
-            return bitmap
-        }
-
-        val croppedBitmap = Bitmap.createBitmap(
-            bitmap,
-            cropRect.left,
-            cropRect.top,
-            cropRect.width(),
-            cropRect.height()
-        )
-
-        return enhanceImage(croppedBitmap)
-    }
-
-
-    fun applyPerspectiveCorrection(
-        bitmap: Bitmap,
-        corners: FloatArray
-    ): Bitmap {
-        // corners should be [x0,y0, x1,y1, x2,y2, x3,y3] for the 4 corners
-        if (corners.size != 8) {
-            Log.w(TAG, "Invalid corners array for perspective correction")
-            return bitmap
-        }
-
-        // Calculate destination rectangle (straight rectangle)
-        val destWidth = 1000 // Target width
-        val destHeight = 1300 // Target height (letter aspect ratio)
-
-        val dest = floatArrayOf(
-            0f, 0f,                          // top-left
-            destWidth.toFloat(), 0f,         // top-right
-            destWidth.toFloat(), destHeight.toFloat(), // bottom-right
-            0f, destHeight.toFloat()          // bottom-left
-        )
-
+        // Create transformation matrix
         val matrix = Matrix()
-        matrix.setPolyToPoly(corners, 0, dest, 0, 4)
+        matrix.setPolyToPoly(srcCorners, 0, dstCorners, 0, 4)
 
-        val correctedBitmap = Bitmap.createBitmap(
-            destWidth,
-            destHeight,
-            Bitmap.Config.ARGB_8888
-        )
+        // Create output bitmap
+        val output = Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
 
-        val canvas = Canvas(correctedBitmap)
-        canvas.drawBitmap(bitmap, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+        // Draw the transformed bitmap
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+        canvas.drawBitmap(this, matrix, paint)
 
-        return correctedBitmap
+        return output
     }
 
     /**
-     * Rotate image based on QR position to ensure correct orientation
+     * Automatically calculates output dimensions to maintain aspect ratio.
+     * Uses the average width/height from the bounding box.
      */
-    fun rotateToCorrectOrientation(
-        bitmap: Bitmap,
-        qrPosition: String
+    fun Bitmap.extractPageWithPerspective(
+        pageBounds: RocketBoundingBox,
+        maxDimension: Int = 2048
     ): Bitmap {
-        val rotationDegrees = when (qrPosition) {
-            "LEFT" -> 0f   // Already correct if QR is bottom-left
-            "RIGHT" -> 0f  // Already correct if QR is bottom-right
-            else -> 0f
+        // Calculate average dimensions from the bounding box
+        val topWidth = distance(pageBounds.topLeft, pageBounds.topRight)
+        val bottomWidth = distance(pageBounds.bottomLeft, pageBounds.bottomRight)
+        val leftHeight = distance(pageBounds.topLeft, pageBounds.bottomLeft)
+        val rightHeight = distance(pageBounds.topRight, pageBounds.bottomRight)
+
+        val avgWidth = (topWidth + bottomWidth) / 2f
+        val avgHeight = (leftHeight + rightHeight) / 2f
+
+        // Scale to fit within maxDimension while maintaining aspect ratio
+        val scale = if (avgWidth > avgHeight) {
+            maxDimension / avgWidth
+        } else {
+            maxDimension / avgHeight
         }
 
-        if (rotationDegrees == 0f) {
-            return bitmap
-        }
+        val outputWidth = (avgWidth * scale).roundToInt()
+        val outputHeight = (avgHeight * scale).roundToInt()
 
-        val matrix = Matrix()
-        matrix.postRotate(rotationDegrees)
+        return extractPageWithPerspective(pageBounds, outputWidth, outputHeight)
+    }
 
-        return Bitmap.createBitmap(
-            bitmap,
-            0,
-            0,
-            bitmap.width,
-            bitmap.height,
-            matrix,
-            true
-        )
+    private fun distance(p1: android.graphics.PointF, p2: android.graphics.PointF): Float {
+        val dx = p2.x - p1.x
+        val dy = p2.y - p1.y
+        return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 }

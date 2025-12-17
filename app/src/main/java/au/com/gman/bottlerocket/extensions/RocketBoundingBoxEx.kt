@@ -55,7 +55,7 @@ fun RocketBoundingBox.aggressiveSmooth(
     )
 }
 
-fun RocketBoundingBox.scaleWithOffset(scaleAndOffset: ScaleAndOffset): RocketBoundingBox {
+fun RocketBoundingBox.scaleUpWithOffset(scaleAndOffset: ScaleAndOffset): RocketBoundingBox {
     val offsetInSourceSpace = PointF(
         -scaleAndOffset.offset.x / scaleAndOffset.scale.x,
         -scaleAndOffset.offset.y / scaleAndOffset.scale.y
@@ -79,6 +79,74 @@ fun RocketBoundingBox.scaleWithOffset(scaleAndOffset: ScaleAndOffset): RocketBou
             (bottomLeft.y - offsetInSourceSpace.y) * scaleAndOffset.scale.y,
         )
     )
+}
+
+fun RocketBoundingBox.scaleDownWithOffset(scaleAndOffset: ScaleAndOffset): RocketBoundingBox {
+    val offsetInSourceSpace = PointF(
+        -scaleAndOffset.offset.x / scaleAndOffset.scale.x,
+        -scaleAndOffset.offset.y / scaleAndOffset.scale.y
+    )
+
+    return RocketBoundingBox(
+        topLeft = PointF(
+            (topLeft.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
+            (topLeft.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
+        ),
+        topRight = PointF(
+            (topRight.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
+            (topRight.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
+        ),
+        bottomRight = PointF(
+            (bottomRight.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
+            (bottomRight.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
+        ),
+        bottomLeft = PointF(
+            (bottomLeft.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
+            (bottomLeft.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
+        )
+    )
+}
+
+fun calculateViewportToBitmapScaling(
+    viewportWidth: Float,
+    viewportHeight: Float,
+    bitmapWidth: Float,
+    bitmapHeight: Float,
+    rotationAngle: Int = 0
+): ScaleAndOffset {
+    // Account for rotation
+    val (actualBitmapW, actualBitmapH) = if (rotationAngle % 180 != 0) {
+        Pair(bitmapHeight, bitmapWidth)
+    } else {
+        Pair(bitmapWidth, bitmapHeight)
+    }
+
+    val viewportAspect = viewportWidth / viewportHeight
+    val bitmapAspect = actualBitmapW / actualBitmapH
+
+    val scale: PointF
+    val offset: PointF
+
+    if (bitmapAspect > viewportAspect) {
+        // Bitmap is wider - it was horizontally cropped to fit viewport
+        val uniformScale = actualBitmapH / viewportHeight
+        scale = PointF(uniformScale, uniformScale)
+
+        val scaledWidth = viewportWidth * uniformScale
+        val cropAmount = (actualBitmapW - scaledWidth) / 2f
+        offset = PointF(cropAmount, 0f)
+
+    } else {
+        // Bitmap is taller - it was vertically cropped to fit viewport
+        val uniformScale = actualBitmapW / viewportWidth
+        scale = PointF(uniformScale, uniformScale)
+
+        val scaledHeight = viewportHeight * uniformScale
+        val cropAmount = (actualBitmapH - scaledHeight) / 2f
+        offset = PointF(0f, cropAmount)
+    }
+
+    return ScaleAndOffset(scale, offset)
 }
 
 fun RocketBoundingBox.toFloatArray(): FloatArray {
@@ -172,6 +240,29 @@ fun RocketBoundingBox.round(): RocketBoundingBox {
 
 fun toPointArray(points: Array<out Point>?): Array<Point> {
     return points?.toList()?.toTypedArray() ?: arrayOf()
+}
+
+fun RocketBoundingBox.rotateAroundCenter(
+    degrees: Float,
+    bitmapWidth: Int,
+    bitmapHeight: Int
+): RocketBoundingBox {
+    val centerX = bitmapWidth / 2f
+    val centerY = bitmapHeight / 2f
+
+    val matrix = Matrix()
+    matrix.setRotate(degrees, centerX, centerY)
+
+    val points = floatArrayOf(
+        topLeft.x, topLeft.y,
+        topRight.x, topRight.y,
+        bottomRight.x, bottomRight.y,
+        bottomLeft.x, bottomLeft.y
+    )
+
+    matrix.mapPoints(points)
+
+    return RocketBoundingBox(points)
 }
 
 private fun distance(p1: PointF, p2: PointF): Float {

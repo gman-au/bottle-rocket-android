@@ -3,7 +3,9 @@ package au.com.gman.bottlerocket.activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import au.com.gman.bottlerocket.BuildConfig
 import au.com.gman.bottlerocket.R
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -17,6 +19,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val beginCaptureButton = findViewById<Button>(R.id.captureButton)
+        val versionNumberText = findViewById<TextView>(R.id.versionNumber)
 
         val exitButton = findViewById<Button>(R.id.exitButton)
 
@@ -29,6 +32,8 @@ class MainActivity : AppCompatActivity() {
             .setOnClickListener {
                 finish()
             }
+
+        versionNumberText.text = BuildConfig.VERSION_NAME
     }
 
     override fun onDestroy() {
