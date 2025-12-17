@@ -1,10 +1,10 @@
 package au.com.gman.bottlerocket.injection
-import au.com.gman.bottlerocket.imaging.BarcodeDetector
+import au.com.gman.bottlerocket.scanning.BarcodeDetector
 import au.com.gman.bottlerocket.imaging.PageTemplateRescaler
-import au.com.gman.bottlerocket.imaging.RocketBoundingBoxMedianFilter
-import au.com.gman.bottlerocket.imaging.ScreenDimensions
-import au.com.gman.bottlerocket.imaging.SteadyFrameIndicator
-import au.com.gman.bottlerocket.imaging.ViewportRescaler
+import au.com.gman.bottlerocket.scanning.RocketBoundingBoxMedianFilter
+import au.com.gman.bottlerocket.scanning.ScreenDimensions
+import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
+import au.com.gman.bottlerocket.scanning.ViewportRescaler
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
 import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler

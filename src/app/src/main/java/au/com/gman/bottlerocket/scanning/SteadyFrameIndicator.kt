@@ -1,4 +1,4 @@
-package au.com.gman.bottlerocket.imaging
+package au.com.gman.bottlerocket.scanning
 
 import au.com.gman.bottlerocket.domain.CaptureStatusEnum
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator

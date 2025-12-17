@@ -4,13 +4,16 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.PointF
 import android.hardware.camera2.CaptureRequest
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.util.Range
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -59,20 +62,14 @@ class CaptureActivity : AppCompatActivity() {
     private lateinit var previewView: PreviewView
 
     private lateinit var overlayView: PageCaptureOverlayView
-    private lateinit var statusText: TextView
 
-    private lateinit var debugText: TextView
-    private lateinit var captureButton: Button
-
-    private lateinit var cancelButton: Button
+    private lateinit var cancelButton: ImageButton
     private lateinit var cameraExecutor: ExecutorService
 
     private lateinit var lastMatchedTemplate: BarcodeDetectionResult
 
     private var imageCapture: ImageCapture? = null
     private var matchFound = false
-    private var previewWidth: Int = 0
-    private var previewHeight: Int = 0
 
     // Services
     private val apiService = ApiService("https://your-backend-url.com")
@@ -83,16 +80,9 @@ class CaptureActivity : AppCompatActivity() {
 
         previewView = findViewById(R.id.previewView)
         overlayView = findViewById(R.id.overlayView)
-        statusText = findViewById(R.id.statusText)
-        debugText = findViewById(R.id.debugText)
-        captureButton = findViewById(R.id.captureButton)
         cancelButton = findViewById(R.id.cancelButton)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-
-        captureButton.setOnClickListener {
-            takePhoto()
-        }
 
         cancelButton.setOnClickListener {
             finish()
@@ -104,28 +94,18 @@ class CaptureActivity : AppCompatActivity() {
                 runOnUiThread {
 
                     matchFound = barcodeDetectionResult.matchFound
-                    captureButton.isEnabled = matchFound
 
                     if (matchFound) {
                         steadyFrameIndicator.increment()
-                        statusText.text = barcodeDetectionResult.validationMessage ?: barcodeDetectionResult.qrCode ?: "Position QR code"
                     }
                     else {
                         steadyFrameIndicator.reset()
                     }
 
-                    statusText.setBackgroundColor(
-                        when (matchFound) {
-                            true -> 0x8000FF00.toInt()
-                            false -> 0x80FFA500.toInt()
-                        }
-                    )
-
                     lastMatchedTemplate = barcodeDetectionResult
 
                     overlayView.setPageOverlayBox(barcodeDetectionResult.pageOverlayPath)
                     overlayView.setQrOverlayPath(barcodeDetectionResult.qrCodeOverlayPath)
-                    //updateDebugText()
                 }
             }
 
@@ -134,6 +114,7 @@ class CaptureActivity : AppCompatActivity() {
         steadyFrameIndicator.setListener(object : ISteadyFrameListener {
             override fun onSteadyResult() {
                 // take the photo!
+                takePhoto()
 
                 // reset
                 steadyFrameIndicator.reset()
@@ -269,33 +250,32 @@ class CaptureActivity : AppCompatActivity() {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     Toast.makeText(baseContext, "Processing...", Toast.LENGTH_SHORT).show()
 
-                    /*cameraExecutor.execute {
-                        processAndSaveImage(photoFile, lastQrData ?: "", lastQrBoundingBox)
-                    }*/
+                    cameraExecutor.execute {
+                        processAndSaveImage(photoFile)
+                    }
                 }
             }
         )
     }
 
-    /*
-    private fun processAndSaveImage(imageFile: File, qrData: String, qrBoundingBox: Rect?) {
+
+    private fun processAndSaveImage(imageFile: File) {
         try {
             val originalBitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
 
             Log.d(TAG, "Processing image: ${originalBitmap.width}x${originalBitmap.height}")
-            Log.d(TAG, "QR Data: $qrData")
-            Log.d(TAG, "QR Box: $qrBoundingBox")
 
             // Process with QR bounding box for smart cropping
-            val processedBitmap = imageProcessor.processImageWithQR(
+            val processedBitmap = originalBitmap
+                /*imageProcessor.processImageWithQR(
                 originalBitmap,
                 qrData,
                 qrBoundingBox
-            )
+            )*/
 
             Log.d(TAG, "Processed: ${processedBitmap.width}x${processedBitmap.height}")
 
-            saveImage(processedBitmap, qrData)
+            saveImage(processedBitmap)
 
             // Upload to backend (optional)
             /*
@@ -323,9 +303,9 @@ class CaptureActivity : AppCompatActivity() {
             imageFile.delete()
         }
     }
-    */
 
-    private fun saveImage(bitmap: Bitmap, qrData: String) {
+
+    private fun saveImage(bitmap: Bitmap) {
         val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis())
 
         val contentValues = ContentValues().apply {
@@ -334,7 +314,7 @@ class CaptureActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BottleRocket")
             }
-            put(MediaStore.Images.Media.DESCRIPTION, "QR: $qrData")
+            //put(MediaStore.Images.Media.DESCRIPTION, "QR: $qrData")
         }
 
         val uri =
@@ -344,7 +324,7 @@ class CaptureActivity : AppCompatActivity() {
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)
             }
             runOnUiThread {
-                Toast.makeText(baseContext, "Saved: $qrData", Toast.LENGTH_LONG).show()
+                //Toast.makeText(baseContext, "Saved: $qrData", Toast.LENGTH_LONG).show()
             }
         }
     }

@@ -1,4 +1,4 @@
-package au.com.gman.bottlerocket.imaging
+package au.com.gman.bottlerocket.scanning
 
 import android.graphics.PointF
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
