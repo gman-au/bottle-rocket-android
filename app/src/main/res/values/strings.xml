@@ -1,9 +1,11 @@
 <resources>
     <string name="app_name">Bottle Rocket</string>
+    <string name="image_preview">Preview image</string>
     <string name="option_begin_capture">Begin capture</string>
     <string name="option_settings">Settings</string>
     <string name="option_exit">Exit</string>
     <string name="prompt_position_qr_code">Position QR code in frame</string>
     <string name="option_go_back">Go back</string>
+    <string name="option_send">Send</string>
     <string name="option_capture">Capture</string>
 </resources>

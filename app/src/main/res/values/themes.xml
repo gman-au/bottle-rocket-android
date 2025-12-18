@@ -24,4 +24,8 @@
         <item name="android:fontFamily">@font/jet_brains_mono</item>
         <item name="android:textSize">6pt</item>
     </style>
+    <style name="Theme.BottleRocket.BorderedImageView">
+        <item name="android:background">@drawable/image_border</item>
+        <item name="android:padding">2dp</item>
+    </style>
 </resources>

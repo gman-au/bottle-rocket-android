@@ -1,4 +1,5 @@
 package au.com.gman.bottlerocket.injection
+import au.com.gman.bottlerocket.file.FileSaver
 import au.com.gman.bottlerocket.imaging.ImageEnhancer
 import au.com.gman.bottlerocket.imaging.ImageProcessor
 import au.com.gman.bottlerocket.scanning.BarcodeDetector
@@ -8,6 +9,7 @@ import au.com.gman.bottlerocket.scanning.ScreenDimensions
 import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
 import au.com.gman.bottlerocket.scanning.ViewportRescaler
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
+import au.com.gman.bottlerocket.interfaces.IFileSaver
 import au.com.gman.bottlerocket.interfaces.IImageEnhancer
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
 import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
@@ -63,6 +65,11 @@ abstract class ImagingModule {
     abstract fun bindImageEnhancer(
         imageEnhancer: ImageEnhancer
     ) : IImageEnhancer
+
+    @Binds
+    abstract fun bindFileSaver(
+        fileSaver: FileSaver
+    ) : IFileSaver
 
     @Singleton
     @Binds

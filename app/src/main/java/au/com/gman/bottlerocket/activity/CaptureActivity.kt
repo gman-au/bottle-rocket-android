@@ -1,14 +1,13 @@
 package au.com.gman.bottlerocket.activity
 
 import android.Manifest
-import android.content.ContentValues
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.PointF
 import android.hardware.camera2.CaptureRequest
-import android.os.Build
+import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Range
 import android.widget.ImageButton
 import android.widget.Toast
@@ -29,11 +28,13 @@ import androidx.core.content.ContextCompat
 import au.com.gman.bottlerocket.PageCaptureOverlayView
 import au.com.gman.bottlerocket.R
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
-import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
+import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
+import au.com.gman.bottlerocket.interfaces.IFileSaveListener
+import au.com.gman.bottlerocket.interfaces.IFileSaver
 import au.com.gman.bottlerocket.interfaces.IImageProcessingListener
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
+import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameListener
 import au.com.gman.bottlerocket.network.ApiService
@@ -59,6 +60,9 @@ class CaptureActivity : AppCompatActivity() {
 
     @Inject
     lateinit var steadyFrameIndicator: ISteadyFrameIndicator
+
+    @Inject
+    lateinit var fileSaver: IFileSaver
 
     private lateinit var previewView: PreviewView
 
@@ -88,6 +92,8 @@ class CaptureActivity : AppCompatActivity() {
         cancelButton.setOnClickListener {
             finish()
         }
+
+        steadyFrameIndicator.setBlocked(false)
 
         barcodeDetector
             .setListener(object : IBarcodeDetectionListener {
@@ -119,8 +125,12 @@ class CaptureActivity : AppCompatActivity() {
                             .show()
                     }
 
-                    saveImage(processedBitmap)
-
+                    fileSaver
+                        .saveImage(
+                            processedBitmap,
+                            FILENAME_FORMAT,
+                            contentResolver
+                        )
                 }
 
                 override fun onProcessingFailure() {
@@ -138,11 +148,35 @@ class CaptureActivity : AppCompatActivity() {
         steadyFrameIndicator
             .setListener(object : ISteadyFrameListener {
                 override fun onSteadyResult() {
+                    // prevent further activity
+                    steadyFrameIndicator.setBlocked(true)
+
                     // take the photo!
                     takePhoto()
 
                     // reset
                     steadyFrameIndicator.reset()
+                }
+            })
+
+        fileSaver
+            .setListener(object : IFileSaveListener {
+                override fun onFileSaveSuccess(uri: Uri) {
+                    steadyFrameIndicator.setBlocked(false)
+                    val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
+                    intent.putExtra("imagePath", uri);
+                    startActivity(intent);
+                }
+
+                override fun onFileSaveFailure() {
+                    runOnUiThread {
+                        Toast.makeText(
+                            baseContext,
+                            "There was an error saving the image",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    steadyFrameIndicator.setBlocked(false)
                 }
             })
 
@@ -172,14 +206,15 @@ class CaptureActivity : AppCompatActivity() {
                         .DEFAULT_BACK_CAMERA
 
                 // Create a consistent resolution selector for all use cases
-                val resolutionSelector = androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
-                    .setAspectRatioStrategy(
-                        androidx.camera.core.resolutionselector.AspectRatioStrategy(
-                            androidx.camera.core.AspectRatio.RATIO_4_3,
-                            androidx.camera.core.resolutionselector.AspectRatioStrategy.FALLBACK_RULE_AUTO
+                val resolutionSelector =
+                    androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
+                        .setAspectRatioStrategy(
+                            androidx.camera.core.resolutionselector.AspectRatioStrategy(
+                                androidx.camera.core.AspectRatio.RATIO_4_3,
+                                androidx.camera.core.resolutionselector.AspectRatioStrategy.FALLBACK_RULE_AUTO
+                            )
                         )
-                    )
-                    .build()
+                        .build()
 
                 val preview =
                     Preview
@@ -285,7 +320,7 @@ class CaptureActivity : AppCompatActivity() {
                     }
 
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                        Toast.makeText(baseContext, "Processing...", Toast.LENGTH_SHORT).show()
+                        //Toast.makeText(baseContext, "Processing...", Toast.LENGTH_SHORT).show()
 
                         cameraExecutor
                             .execute {
@@ -298,30 +333,6 @@ class CaptureActivity : AppCompatActivity() {
                     }
                 }
             )
-    }
-
-    private fun saveImage(bitmap: Bitmap) {
-        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US).format(System.currentTimeMillis())
-
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BottleRocket")
-            }
-        }
-
-
-        val uri =
-            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        uri?.let {
-            contentResolver.openOutputStream(it)?.use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)
-            }
-            runOnUiThread {
-                //Toast.makeText(baseContext, "Saved: $qrData", Toast.LENGTH_LONG).show()
-            }
-        }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {

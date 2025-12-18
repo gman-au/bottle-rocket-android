@@ -114,12 +114,14 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenBorder
             CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberBorder
             CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberBorder
+            CaptureStatusEnum.PROCESSING -> paintCaptureStatusAmberBorder
         }
 
         val fillColor = when (steadyFrameIndicator.getStatus()) {
             CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenFill
             CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberFill
             CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberFill
+            CaptureStatusEnum.PROCESSING -> paintCaptureStatusAmberFill
         }
 
         pageBoundingBox?.let { canvas.drawPath(it.toPath(), borderColor) }
@@ -130,6 +132,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.CAPTURING -> pageBoundingBox?.fillFromBottom(steadyFrameIndicator.getPercentage())
             CaptureStatusEnum.HOLD_STEADY -> null
             CaptureStatusEnum.NOT_FOUND -> null
+            CaptureStatusEnum.PROCESSING -> pageBoundingBox?.fillFromBottom(steadyFrameIndicator.getPercentage())
         }
 
         fillBox?.let { canvas.drawPath(it.toPath(), fillColor) }

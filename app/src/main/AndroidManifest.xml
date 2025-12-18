@@ -33,6 +33,14 @@
                 <action android:name="android.intent.action.CAPTURE" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".activity.PreviewActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BottleRocket">
+            <intent-filter>
+                <action android:name="android.intent.action.PREVIEW" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
