@@ -43,4 +43,5 @@ replay_pid*
 /captures
 .externalNativeBuild
 .cxx
+*.aab
 local.properties
