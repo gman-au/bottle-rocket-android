@@ -173,16 +173,10 @@ class CaptureActivity : AppCompatActivity() {
 
                 // Create a consistent resolution selector for all use cases
                 val resolutionSelector = androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
-                    /*.setAspectRatioStrategy(
+                    .setAspectRatioStrategy(
                         androidx.camera.core.resolutionselector.AspectRatioStrategy(
                             androidx.camera.core.AspectRatio.RATIO_4_3,
                             androidx.camera.core.resolutionselector.AspectRatioStrategy.FALLBACK_RULE_AUTO
-                        )
-                    )*/
-                    .setResolutionStrategy(
-                        androidx.camera.core.resolutionselector.ResolutionStrategy(
-                        android.util.Size(3072, 4080),  // Match capture resolution exactly
-                        androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
                         )
                     )
                     .build()
@@ -190,7 +184,7 @@ class CaptureActivity : AppCompatActivity() {
                 val preview =
                     Preview
                         .Builder()
-                        .setResolutionSelector(resolutionSelector)  // Use ResolutionSelector
+                        .setResolutionSelector(resolutionSelector)
                         .build()
                         .also {
                             it
@@ -202,14 +196,14 @@ class CaptureActivity : AppCompatActivity() {
                         .Builder()
                         .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                         .setTargetRotation(windowManager.defaultDisplay.rotation)
-                        .setResolutionSelector(resolutionSelector)  // Use ResolutionSelector
+                        .setResolutionSelector(resolutionSelector)
                         .build()
 
                 val imageAnalyzer =
                     ImageAnalysis
                         .Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .setResolutionSelector(resolutionSelector)  // Use ResolutionSelector
+                        .setResolutionSelector(resolutionSelector)
                         .build()
                         .also {
                             it
