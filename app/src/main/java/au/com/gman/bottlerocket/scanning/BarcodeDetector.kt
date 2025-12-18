@@ -23,14 +23,14 @@ class BarcodeDetector @Inject constructor(
     }
 
     private val scannerOptions:
-        BarcodeScannerOptions =
-            BarcodeScannerOptions
-                .Builder()
-                /*.setBarcodeFormats(
-                    Barcode.FORMAT_QR_CODE,
-                    Barcode.FORMAT_AZTEC
-                )*/
-                .build()
+            BarcodeScannerOptions =
+        BarcodeScannerOptions
+            .Builder()
+            /*.setBarcodeFormats(
+                Barcode.FORMAT_QR_CODE,
+                Barcode.FORMAT_AZTEC
+            )*/
+            .build()
 
     private val scanner =
         BarcodeScanning
@@ -49,35 +49,29 @@ class BarcodeDetector @Inject constructor(
                 .image
 
         if (mediaImage != null) {
-            val image =
-                InputImage
-                    .fromMediaImage(
-                        mediaImage,
-                        imageProxy
-                            .imageInfo
-                            .rotationDegrees
-                    )
-
-            Log.d(TAG, "InputImage dimensions: ${image.width}x${image.height}")  // This will likely be 1200x1600!
-
-            val imageWidth =
-                mediaImage
-                    .width
-
-            val imageHeight =
-                mediaImage
-                    .height
 
             val rotationDegrees =
                 imageProxy
                     .imageInfo
                     .rotationDegrees
 
-            Log.d(TAG, "ImageAnalysis actual resolution: ${imageProxy.width}x${imageProxy.height}")
+            val image =
+                InputImage
+                    .fromMediaImage(
+                        mediaImage,
+                        rotationDegrees
+                    )
 
             Log.d(TAG, "ImageProxy dimensions: ${imageProxy.width}x${imageProxy.height}")
-            Log.d(TAG, "MediaImage dimensions: ${mediaImage.width}x${mediaImage.height}")
             Log.d(TAG, "Rotation degrees: $rotationDegrees")
+
+            val imageWidth =
+                imageProxy
+                    .width
+
+            val imageHeight =
+                imageProxy
+                    .height
 
             screenDimensions
                 .setSourceSize(
@@ -99,7 +93,11 @@ class BarcodeDetector @Inject constructor(
 
                     val barcodeDetectionResult =
                         qrCodeHandler
-                            .handle(barcode)
+                            .handle(
+                                barcode,
+                                imageWidth,
+                                imageHeight
+                            )
 
                     listener?.onDetectionSuccess(barcodeDetectionResult)
                 }

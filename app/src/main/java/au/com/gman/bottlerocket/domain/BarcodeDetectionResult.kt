@@ -6,12 +6,11 @@ data class BarcodeDetectionResult(
     val pageTemplate: PageTemplate?,
     val pageOverlayPath: RocketBoundingBox?,
     val qrCodeOverlayPath: RocketBoundingBox?,
-    val validationMessage: String?,
+    val pageOverlayPathPreview: RocketBoundingBox?,
+    val qrCodeOverlayPathPreview: RocketBoundingBox?,
     val cameraRotation: Float,
     val boundingBoxRotation: Float,
     val scalingFactor: ScaleAndOffset?,
-    val pageOverlayPathPreview: RocketBoundingBox?,
-    val qrCodeOverlayPathPreview: RocketBoundingBox?,
     val sourceImageWidth: Int,
     val sourceImageHeight: Int
 )

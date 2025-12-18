@@ -29,14 +29,17 @@ class QrCodeHandler @Inject constructor(
 
     private var previousPageBounds: RocketBoundingBox? = null
 
-    override fun handle(barcode: Barcode?): BarcodeDetectionResult {
+    override fun handle(
+        barcode: Barcode?,
+        sourceWidth: Int,
+        sourceHeight: Int
+    ): BarcodeDetectionResult {
         var matchFound = false
         var pageBoundingBox: RocketBoundingBox? = null
-        var pageBoundingBoxUnscaled: RocketBoundingBox? = null  // ADD THIS
+        var pageBoundingBoxUnscaled: RocketBoundingBox? = null
         var qrCornerPointsBoxUnscaled: RocketBoundingBox? = null
         var qrCornerPointsBoxScaled: RocketBoundingBox? = null
         var qrCodeValue: String? = null
-        var validationMessage: String? = null
         var cameraRotation: Float = 0F
         var boundingBoxRotation: Float = 0F
         var scalingFactorViewport: ScaleAndOffset? = null
@@ -103,16 +106,15 @@ class QrCodeHandler @Inject constructor(
             matchFound = matchFound,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
-            pageOverlayPath = pageBoundingBoxUnscaled?.round(),  // UNSCALED for photo processing
-            pageOverlayPathPreview = pageBoundingBox?.round(),    // SCALED for preview drawing
-            qrCodeOverlayPath = qrCornerPointsBoxUnscaled?.round(),  // UNSCALED
-            qrCodeOverlayPathPreview = qrCornerPointsBoxScaled?.round(),  // SCALED
-            validationMessage = validationMessage,
+            pageOverlayPath = pageBoundingBoxUnscaled?.round(),
+            pageOverlayPathPreview = pageBoundingBox?.round(),
+            qrCodeOverlayPath = qrCornerPointsBoxUnscaled?.round(),
+            qrCodeOverlayPathPreview = qrCornerPointsBoxScaled?.round(),
             cameraRotation = cameraRotation,
             boundingBoxRotation = boundingBoxRotation,
             scalingFactor = scalingFactorViewport,
-            sourceImageWidth = 1600,  // ImageAnalysis dimensions
-            sourceImageHeight = 1200
+            sourceImageWidth = sourceWidth,
+            sourceImageHeight = sourceHeight
         )
     }
 }
