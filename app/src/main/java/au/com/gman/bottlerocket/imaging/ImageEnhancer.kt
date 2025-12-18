@@ -7,21 +7,23 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.PointF
+import android.util.Log
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
+import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.applyRotation
-import au.com.gman.bottlerocket.extensions.rotateAroundCenter
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.extensions.toPath
+import au.com.gman.bottlerocket.interfaces.IBitmapRescaler
 import au.com.gman.bottlerocket.interfaces.IImageEnhancer
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
-import au.com.gman.bottlerocket.interfaces.IViewportRescaler
-import au.com.gman.bottlerocket.scanning.ViewportRescaler
 import javax.inject.Inject
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 class ImageEnhancer @Inject constructor(
-    private val viewportRescaler: IViewportRescaler,
+    private val bitmapRescaler: IBitmapRescaler,
     private val screenDimensions: IScreenDimensions
 ) : IImageEnhancer {
 
@@ -41,25 +43,39 @@ class ImageEnhancer @Inject constructor(
             return null
         }
 
+        var viewportOverlayPath = detectionResult.pageOverlayPath
+
         val totalRotation = detectionResult.cameraRotation - detectionResult.boundingBoxRotation
 
         val rotatedBitmap =
             bitmap
-                .rotate(totalRotation)
+                .rotate(detectionResult.cameraRotation)
+//                .rotate(totalRotation)
 
         var bitmapScalingFactor =
-            viewportRescaler
-                .calculateScalingFactorWithOffset(
+            bitmapRescaler
+                .calculateScalingFactor(
                     sourceWidth = screenDimensions.getTargetSize()!!.x,
                     sourceHeight = screenDimensions.getTargetSize()!!.y,
                     targetWidth = rotatedBitmap.width.toFloat(),
                     targetHeight = rotatedBitmap.height.toFloat(),
-                    0
-                )
 
-        bitmapScalingFactor = detectionResult.scalingFactor!!
+                )
+        var previousScreenDimensions = screenDimensions.getTargetSize()
+        Log.d(TAG, "previousScreenDimensions: ${previousScreenDimensions!!.x}x${previousScreenDimensions!!.y}")
+        Log.d(TAG, "rotatedBitmap: ${rotatedBitmap.width}x${rotatedBitmap.height}")
+
+        Log.d(TAG, "viewportOverlayPath: $viewportOverlayPath")
+        Log.d(TAG, "bitmapScalingFactor: $bitmapScalingFactor")
+
+        bitmapScalingFactor = ScaleAndOffset(
+            scale = PointF(2F, 2F),
+            offset = PointF(0F, 0F)
+        )
 
         var overlayToDraw = detectionResult.pageOverlayPath
+            //.scaleUpWithOffset(bitmapScalingFactor)
+            //.applyRotation(-detectionResult.boundingBoxRotation)
         //overlayToDraw = overlayToDraw.applyRotation(-detectionResult.boundingBoxRotation)
 
         /*overlayToDraw =
@@ -71,7 +87,7 @@ class ImageEnhancer @Inject constructor(
                     bitmapHeight = bitmap.height
                 )*/
 
-        overlayToDraw = overlayToDraw.scaleUpWithOffset(bitmapScalingFactor)
+        //overlayToDraw = overlayToDraw.scaleUpWithOffset(bitmapScalingFactor)
 
         val correctedBitmap =
             rotatedBitmap
@@ -214,9 +230,9 @@ class ImageEnhancer @Inject constructor(
         return extractPageWithPerspective(pageBounds, outputWidth, outputHeight)
     }
 
-    private fun distance(p1: android.graphics.PointF, p2: android.graphics.PointF): Float {
+    private fun distance(p1: PointF, p2: PointF): Float {
         val dx = p2.x - p1.x
         val dy = p2.y - p1.y
-        return kotlin.math.sqrt(dx * dx + dy * dy)
+        return sqrt(dx * dx + dy * dy)
     }
 }
