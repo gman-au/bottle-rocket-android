@@ -48,6 +48,8 @@ class QrCodeHandler @Inject constructor(
 
         if (barcode != null) {
             qrCodeValue = barcode.rawValue
+            Log.d(TAG, "QR code value found: $qrCodeValue")
+
             val qrCornerPoints = RocketBoundingBox(barcode.cornerPoints)
             qrCornerPointsBoxUnscaled = qrCornerPoints
 
