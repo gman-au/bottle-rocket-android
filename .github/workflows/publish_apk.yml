@@ -3,7 +3,8 @@ name: Android Release Build and Publish
 on:
   push:
     tags:
-      - 'v*.*.*' # Trigger when a tag like v1.0.0 is pushed
+      - 'v*.*.*'    # Trigger when a tag like v1.0.0 is pushed
+      - 'v*.*.*.*'  # Trigger when a tag like v1.0.0.0 is pushed
 
 jobs:
   build:
