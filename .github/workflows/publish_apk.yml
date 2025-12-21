@@ -33,7 +33,8 @@ jobs:
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      run: ./gradlew assembleRelease
+        VERSION_NAME: ${{ github.event.release.tag_name }}
+      run: ./gradlew assembleRelease -PversionName="${VERSION_NAME}"
 
     - name: Upload Release APK asset
       uses: actions/upload-release-asset@v1
@@ -42,5 +43,5 @@ jobs:
       with:
         upload_url: ${{ github.event.release.upload_url }}
         asset_path: app/build/outputs/apk/release/app-release.apk
-        asset_name: app-release.apk
+        asset_name: app-release-${{ github.event.release.tag_name }}.apk
         asset_content_type: application/vnd.android.package-archive
