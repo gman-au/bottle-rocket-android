@@ -34,6 +34,7 @@ class QrCodeHandler @Inject constructor(
         sourceWidth: Int,
         sourceHeight: Int
     ): BarcodeDetectionResult {
+        val codeFound = true
         var matchFound = false
         var pageBoundingBox: RocketBoundingBox? = null
         var pageBoundingBoxUnscaled: RocketBoundingBox? = null
@@ -61,40 +62,49 @@ class QrCodeHandler @Inject constructor(
             boundingBoxRotation = qrCornerPointsBoxUnscaled.calculateRotationAngle()
             cameraRotation = screenDimensions.getScreenRotation()
 
-            if (pageTemplate != null && scalingFactorViewport != null) {
+            if (scalingFactorViewport != null) {
 
                 qrCornerPointsBoxScaled = qrCornerPointsBoxUnscaled
                     .scaleUpWithOffset(scalingFactorViewport)
 
-                // Calculate page bounds in UNSCALED (ImageAnalysis) space
-                val rawPageBounds = pageTemplateRescaler
-                    .calculatePageBoundsFromTemplate(
-                        qrCornerPointsBoxUnscaled,
-                        RocketBoundingBox(pageTemplate.pageDimensions)
+                if (pageTemplate != null) {
+
+                    // Calculate page bounds in UNSCALED (ImageAnalysis) space
+                    val rawPageBounds = pageTemplateRescaler
+                        .calculatePageBoundsFromTemplate(
+                            qrCornerPointsBoxUnscaled,
+                            RocketBoundingBox(pageTemplate.pageDimensions)
+                        )
+
+                    // Store the unscaled version
+                    pageBoundingBoxUnscaled = rawPageBounds
+
+                    // Scale for preview display
+                    val scaledPageBounds = rawPageBounds
+                        .scaleUpWithOffset(scalingFactorViewport)
+
+                    // Apply smoothing to the SCALED version (for preview)
+                    pageBoundingBox = scaledPageBounds
+                        .aggressiveSmooth(
+                            previous = previousPageBounds,
+                            smoothFactor = 0.3f,
+                            maxJumpThreshold = 50f
+                        )
+
+                    pageBoundingBox = rocketBoundingBoxMedianFilter.add(pageBoundingBox)
+                    previousPageBounds = pageBoundingBox
+
+                    matchFound = true
+
+                    Log.d(
+                        TAG,
+                        "Unscaled page bounds (ImageAnalysis space): $pageBoundingBoxUnscaled"
                     )
-
-                // Store the unscaled version
-                pageBoundingBoxUnscaled = rawPageBounds
-
-                // Scale for preview display
-                val scaledPageBounds = rawPageBounds
-                    .scaleUpWithOffset(scalingFactorViewport)
-
-                // Apply smoothing to the SCALED version (for preview)
-                pageBoundingBox = scaledPageBounds
-                    .aggressiveSmooth(
-                        previous = previousPageBounds,
-                        smoothFactor = 0.3f,
-                        maxJumpThreshold = 50f
-                    )
-
-                pageBoundingBox = rocketBoundingBoxMedianFilter.add(pageBoundingBox)
-                previousPageBounds = pageBoundingBox
-
-                matchFound = true
-
-                Log.d(TAG, "Unscaled page bounds (ImageAnalysis space): $pageBoundingBoxUnscaled")
-                Log.d(TAG, "Scaled page bounds (Preview space): $pageBoundingBox")
+                    Log.d(TAG, "Scaled page bounds (Preview space): $pageBoundingBox")
+                } else {
+                    previousPageBounds = null
+                    rocketBoundingBoxMedianFilter.reset()
+                }
             } else {
                 previousPageBounds = null
                 rocketBoundingBoxMedianFilter.reset()
@@ -105,6 +115,7 @@ class QrCodeHandler @Inject constructor(
         }
 
         return BarcodeDetectionResult(
+            codeFound = codeFound,
             matchFound = matchFound,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,

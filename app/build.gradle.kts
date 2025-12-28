@@ -6,6 +6,9 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+val localVersionName = "v0.0.0.local.dev"
+val localVersionCode = 1
+
 android {
     namespace = "au.com.gman.bottlerocket"
     compileSdk = 36
@@ -14,8 +17,8 @@ android {
         applicationId = "au.com.gman.bottlerocket"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = project.findProperty("versionName") as String? ?: "0.1.alpha"
+        versionCode = project.findProperty("versionCode") as Int? ?: localVersionCode
+        versionName = project.findProperty("versionName") as String? ?: localVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

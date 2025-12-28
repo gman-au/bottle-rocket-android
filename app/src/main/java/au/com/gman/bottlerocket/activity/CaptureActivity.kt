@@ -76,6 +76,8 @@ class CaptureActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private var matchFound = false
 
+    private var codeFound = false
+
     // Services
     private val apiService = ApiService("https://your-backend-url.com")
 
@@ -100,11 +102,19 @@ class CaptureActivity : AppCompatActivity() {
                 override fun onDetectionSuccess(barcodeDetectionResult: BarcodeDetectionResult) {
                     runOnUiThread {
 
+                        codeFound = barcodeDetectionResult.codeFound
                         matchFound = barcodeDetectionResult.matchFound
 
                         if (matchFound) {
                             steadyFrameIndicator.increment()
+                            overlayView.setUnmatchedQrCode(null)
                         } else {
+                            if (codeFound) {
+                                overlayView.setUnmatchedQrCode(barcodeDetectionResult.qrCode)
+                            }
+                            else {
+                                overlayView.setUnmatchedQrCode(null)
+                            }
                             steadyFrameIndicator.reset()
                         }
 
@@ -114,7 +124,6 @@ class CaptureActivity : AppCompatActivity() {
                         overlayView.setQrOverlayPath(barcodeDetectionResult.qrCodeOverlayPathPreview)
                     }
                 }
-
             })
 
         imageProcessor

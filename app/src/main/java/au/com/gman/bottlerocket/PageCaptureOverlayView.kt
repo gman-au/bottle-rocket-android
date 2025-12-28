@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.res.ResourcesCompat
@@ -58,15 +60,26 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             }
 
     private val paintStatusText =
-        Paint()
+        TextPaint()
             .apply {
                 color = context.getColor(R.color.white)
                 style = Paint.Style.FILL_AND_STROKE
                 strokeWidth = 2f
             }
 
+    private val paintStatusUnmatchedCode =
+        TextPaint()
+            .apply {
+                color = context.getColor(R.color.capture_status_unmatched_code)
+                style = Paint.Style.FILL_AND_STROKE
+                strokeWidth = 2f
+                textSize = 8.0f
+            }
+
     private var pageBoundingBox: RocketBoundingBox? = null
     private var qrCodeBoundingBox: RocketBoundingBox? = null
+
+    private var unmatchedQrCode: String? = null
 
     fun setPageOverlayBox(box: RocketBoundingBox?) {
         pageBoundingBox = box
@@ -80,17 +93,27 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
         postInvalidate()
     }
 
-    private fun drawCenter(canvas: Canvas, box: RocketBoundingBox?, paint: Paint, text: String) {
+    fun setUnmatchedQrCode(qrCode: String? = null) {
+        unmatchedQrCode = qrCode
+        // Invalidate the view to trigger a redraw
+        postInvalidate()
+    }
+
+    private fun drawCenteredText(
+        canvas: Canvas,
+        box: RocketBoundingBox?,
+        paint: TextPaint,
+        text: String
+    ) {
         if (box == null) return
         if (measuredFontSize == null) return
 
         // Get the bounds of the area you are drawing within
         val bounds: Rect = box.toRect()
 
-
         // Set horizontal alignment to Center
-        paint.setTextAlign(Paint.Align.CENTER)
-        paint.setTextSize(measuredFontSize!!)
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = measuredFontSize!!
         paint.setTypeface(typeface)
 
         // Calculate X position: the horizontal center of the bounds
@@ -103,11 +126,51 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
         canvas.drawText(text, xPos.toFloat(), yPos, paint)
     }
 
+    private fun drawWrappedText(
+        canvas: Canvas,
+        box: RocketBoundingBox?,
+        paint: TextPaint,
+        text: String
+    ) {
+        if (box == null) return
+        if (measuredFontSize == null) return
+
+        // Get the bounds of the area you are drawing within
+        val bounds: Rect = box.toRect()
+
+        // Set horizontal alignment to Center
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = (measuredFontSize!!) * 0.5F
+        paint.setTypeface(typeface)
+
+        // Use StaticLayout.Builder for API 23+
+        val staticLayout =
+            StaticLayout
+                .Builder
+                .obtain(text, 0, text.length, paint, bounds.width())
+                .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
+                .setIncludePad(false)
+                .build()
+
+        // Draw the text
+        canvas
+            .save()
+
+        canvas
+            .translate(
+                bounds.left.toFloat() + (staticLayout.width / 2),
+                bounds.top.toFloat() - (staticLayout.height * 1.5F)
+            )
+
+        staticLayout
+            .draw(canvas)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         if (measuredFontSize == null) {
-            measuredFontSize = this.measuredHeight / 32.0F;
+            measuredFontSize = this.measuredHeight / 32.0F
         }
 
         val borderColor = when (steadyFrameIndicator.getStatus()) {
@@ -126,7 +189,18 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
 
         pageBoundingBox?.let { canvas.drawPath(it.toPath(), borderColor) }
         pageBoundingBox?.let { canvas.drawPath(it.toPath(), fillColor) }
-        qrCodeBoundingBox?.let { canvas.drawPath(it.toPath(), borderColor) }
+        qrCodeBoundingBox?.let { it ->
+            canvas.drawPath(it.toPath(), borderColor)
+            unmatchedQrCode?.let {
+                val unmatchedStatusWithCode = "Unmatched QR Code:\r\n\r\n${it}"
+                drawWrappedText(
+                    canvas,
+                    qrCodeBoundingBox,
+                    paintStatusUnmatchedCode,
+                    unmatchedStatusWithCode
+                )
+            }
+        }
 
         val fillBox = when (steadyFrameIndicator.getStatus()) {
             CaptureStatusEnum.CAPTURING -> pageBoundingBox?.fillFromBottom(steadyFrameIndicator.getPercentage())
@@ -137,7 +211,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
 
         fillBox?.let { canvas.drawPath(it.toPath(), fillColor) }
 
-        drawCenter(
+        drawCenteredText(
             canvas,
             pageBoundingBox,
             paintStatusText,
