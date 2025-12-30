@@ -2,13 +2,21 @@ package au.com.gman.bottlerocket.interfaces
 
 import android.content.ContentResolver
 import android.graphics.Bitmap
+import android.net.Uri
+import java.io.File
 
-interface IFileSaver {
+interface IFileIo {
     fun saveImage(
         bitmap: Bitmap,
         fileNameFormat: String,
         contentResolver: ContentResolver
     )
 
-    fun setListener(listener: IFileSaveListener)
+    fun loadImage(
+        uri: Uri,
+        cacheDir: File,
+        contentResolver: ContentResolver
+    ): File
+
+    fun setSaveListener(listener: IFileSaveListener)
 }
