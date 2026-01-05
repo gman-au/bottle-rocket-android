@@ -31,13 +31,12 @@ import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
 import au.com.gman.bottlerocket.interfaces.IFileSaveListener
-import au.com.gman.bottlerocket.interfaces.IFileSaver
+import au.com.gman.bottlerocket.interfaces.IFileIo
 import au.com.gman.bottlerocket.interfaces.IImageProcessingListener
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameListener
-import au.com.gman.bottlerocket.network.ApiService
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.text.SimpleDateFormat
@@ -62,7 +61,7 @@ class CaptureActivity : AppCompatActivity() {
     lateinit var steadyFrameIndicator: ISteadyFrameIndicator
 
     @Inject
-    lateinit var fileSaver: IFileSaver
+    lateinit var fileIo: IFileIo
 
     private lateinit var previewView: PreviewView
 
@@ -77,9 +76,6 @@ class CaptureActivity : AppCompatActivity() {
     private var matchFound = false
 
     private var codeFound = false
-
-    // Services
-    private val apiService = ApiService("https://your-backend-url.com")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -134,7 +130,7 @@ class CaptureActivity : AppCompatActivity() {
                             .show()
                     }
 
-                    fileSaver
+                    fileIo
                         .saveImage(
                             processedBitmap,
                             FILENAME_FORMAT,
@@ -168,8 +164,8 @@ class CaptureActivity : AppCompatActivity() {
                 }
             })
 
-        fileSaver
-            .setListener(object : IFileSaveListener {
+        fileIo
+            .setSaveListener(object : IFileSaveListener {
                 override fun onFileSaveSuccess(uri: Uri) {
                     steadyFrameIndicator.setBlocked(false)
                     val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)

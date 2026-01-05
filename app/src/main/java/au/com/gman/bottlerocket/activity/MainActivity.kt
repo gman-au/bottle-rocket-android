@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val beginCaptureButton = findViewById<Button>(R.id.captureButton)
+        val settingsButton = findViewById<Button>(R.id.settingsButton)
         val versionNumberText = findViewById<TextView>(R.id.versionNumber)
 
         val exitButton = findViewById<Button>(R.id.exitButton)
@@ -26,6 +27,11 @@ class MainActivity : AppCompatActivity() {
         beginCaptureButton
             .setOnClickListener {
                 startActivity(Intent(this, CaptureActivity::class.java))
+            }
+
+        settingsButton
+            .setOnClickListener {
+                startActivity(Intent(this, SettingsActivity::class.java))
             }
 
         exitButton

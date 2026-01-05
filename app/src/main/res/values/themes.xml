@@ -18,6 +18,13 @@
         <item name="android:textAllCaps">false</item>
         <item name="android:fontFamily">@font/jet_brains_mono</item>
     </style>
+    <style name="Theme.BottleRocket.EditText" parent="Widget.AppCompat.EditText">
+        <item name="android:textColor">@color/bottle_rocket_light</item>
+        <item name="android:textColorHint">@color/white</item>
+        <item name="android:backgroundTint">@color/bottle_rocket_light</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/jet_brains_mono</item>
+    </style>
     <style name="Theme.BottleRocket.TextDebug" parent="Widget.AppCompat.TextView">
         <item name="android:textColor">@color/debug_text</item>
         <item name="android:textAllCaps">false</item>
