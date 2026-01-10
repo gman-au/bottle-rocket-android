@@ -1,5 +1,6 @@
 package au.com.gman.bottlerocket.qrCode
 
+import android.graphics.PointF
 import android.util.Log
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
@@ -9,19 +10,22 @@ import au.com.gman.bottlerocket.extensions.calculateRotationAngle
 import au.com.gman.bottlerocket.extensions.isOutOfBounds
 import au.com.gman.bottlerocket.extensions.round
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
+import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import com.google.mlkit.vision.barcode.common.Barcode
+import org.opencv.core.Mat
 import javax.inject.Inject
 
 class QrCodeHandler @Inject constructor(
     private val screenDimensions: IScreenDimensions,
     private val pageTemplateRescaler: IPageTemplateRescaler,
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
-    private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter
+    private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
+    private val edgeDetector: IEdgeDetector
 ) : IQrCodeHandler {
 
     companion object {
@@ -32,6 +36,7 @@ class QrCodeHandler @Inject constructor(
 
     override fun handle(
         barcode: Barcode?,
+        mat: Mat,
         sourceWidth: Int,
         sourceHeight: Int
     ): BarcodeDetectionResult {
@@ -101,19 +106,35 @@ class QrCodeHandler @Inject constructor(
                     // Store the unscaled version
                     pageBoundingBoxUnscaled = rawPageBounds
 
-                    // Scale for preview display
-                    val scaledPageBounds =
-                        rawPageBounds
-                            .scaleUpWithOffset(scalingFactorViewport)
+                    // openCV edge detection
+                    val detectedEdges =
+                        edgeDetector
+                            .detectEdges(mat)
+                    if (detectedEdges?.size == 4) {
+                        val newPoints =
+                            detectedEdges
+                                .take(4)
+                                .map { o -> PointF(o.x.toFloat(), o.y.toFloat()) }
+                                .toTypedArray()
 
-                    // Apply smoothing to the SCALED version (for preview)
-                    pageBoundingBox =
-                        scaledPageBounds
-                            .aggressiveSmooth(
-                                previous = previousPageBounds,
-                                smoothFactor = 0.3f,
-                                maxJumpThreshold = 50f
-                            )
+                        pageBoundingBox =
+                            RocketBoundingBox(newPoints)
+                                .scaleUpWithOffset(scalingFactorViewport)
+                    } else {
+                        // Scale for preview display
+                        val scaledPageBounds =
+                            rawPageBounds
+                                .scaleUpWithOffset(scalingFactorViewport)
+
+                        // Apply smoothing to the SCALED version (for preview)
+                        pageBoundingBox =
+                            scaledPageBounds
+                                .aggressiveSmooth(
+                                    previous = previousPageBounds,
+                                    smoothFactor = 0.3f,
+                                    maxJumpThreshold = 50f
+                                )
+                    }
 
                     // any qr point outside viewport should be out of bounds
                     outOfBounds =

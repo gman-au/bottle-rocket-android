@@ -64,6 +64,13 @@ data class RocketBoundingBox(
         toPointArray(points)[3].toPointF()
     )
 
+    constructor(points: Array<PointF>) : this(
+        points[0],
+        points[1],
+        points[2],
+        points[3]
+    )
+
     override fun toString(): String = buildString {
         appendLine("${topLeft.x}F, ${topLeft.y}F,")
         appendLine("${topRight.x}F, ${topRight.y}F,")

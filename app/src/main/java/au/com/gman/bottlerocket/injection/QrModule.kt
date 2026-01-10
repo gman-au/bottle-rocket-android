@@ -1,6 +1,8 @@
 package au.com.gman.bottlerocket.injection
+import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
+import au.com.gman.bottlerocket.qrCode.EdgeDetector
 import au.com.gman.bottlerocket.qrCode.QrCodeHandler
 import au.com.gman.bottlerocket.qrCode.QrCodeTemplateMatcher
 import dagger.Binds
@@ -21,4 +23,9 @@ abstract class QrModule {
     abstract fun bindQrCodeTemplateMatcher(
         templateMapper: QrCodeTemplateMatcher
     ) : IQrCodeTemplateMatcher
+
+    @Binds
+    abstract fun bindEdgeDetector(
+        edgeDetector: EdgeDetector
+    ) : IEdgeDetector
 }
