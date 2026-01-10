@@ -1,85 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginHorizontal="32dp"
-        android:layout_marginVertical="32dp"
-        android:orientation="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        android:fillViewport="true">
 
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="240dp"
-            android:layout_height="240dp"
-            android:layout_gravity="center"
-            android:layout_marginHorizontal="0dp"
-            android:layout_marginVertical="40dp"
-            android:src="@mipmap/ic_launcher" />
-
-        <TextView
-            android:id="@+id/textView"
-            style="@style/Theme.BottleRocket.TextView"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_gravity="center"
+            android:layout_height="wrap_content"
             android:layout_marginHorizontal="32dp"
-            android:layout_marginVertical="16dp"
-            android:text="@string/app_name"
-            android:textAlignment="center"
-            android:textSize="12pt" />
+            android:layout_marginVertical="32dp"
+            android:orientation="vertical">
 
-        <Button
-            android:id="@+id/captureButton"
-            style="@style/Theme.BottleRocket.Button"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginHorizontal="32dp"
-            android:layout_marginVertical="16dp"
-            android:enabled="true"
-            android:text="@string/option_begin_capture" />
+            <ImageView
+                android:id="@+id/imageView"
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:layout_gravity="center"
+                android:layout_marginHorizontal="0dp"
+                android:layout_marginVertical="40dp"
+                android:contentDescription="@string/bottle_rocket_logo"
+                android:src="@mipmap/ic_launcher" />
 
-        <Button
-            android:id="@+id/settingsButton"
-            style="@style/Theme.BottleRocket.Button"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginHorizontal="32dp"
-            android:layout_marginVertical="16dp"
-            android:text="@string/option_settings" />
+            <TextView
+                android:id="@+id/textView"
+                style="@style/Theme.BottleRocket.TextView"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:layout_marginHorizontal="32dp"
+                android:layout_marginVertical="16dp"
+                android:text="@string/app_name"
+                android:textAlignment="center"
+                android:textSize="12pt" />
 
-        <Button
-            android:id="@+id/exitButton"
-            style="@style/Theme.BottleRocket.Button"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginHorizontal="32dp"
-            android:layout_marginVertical="16dp"
-            android:enabled="true"
-            android:text="@string/option_exit" />
+            <Button
+                android:id="@+id/captureButton"
+                style="@style/Theme.BottleRocket.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="32dp"
+                android:layout_marginVertical="16dp"
+                android:enabled="true"
+                android:text="@string/option_begin_capture" />
 
-        <TextView
-            android:id="@+id/versionNumber"
-            style="@style/Theme.BottleRocket.TextView"
-            android:layout_width="match_parent"
-            android:layout_height="32dp"
-            android:layout_gravity="end"
-            android:layout_marginHorizontal="32dp"
-            android:layout_marginVertical="16dp"
-            android:textAlignment="textEnd"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            android:textSize="5pt" />
+            <Button
+                android:id="@+id/settingsButton"
+                style="@style/Theme.BottleRocket.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="32dp"
+                android:layout_marginVertical="16dp"
+                android:text="@string/option_settings" />
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/exitButton"
+                style="@style/Theme.BottleRocket.Button"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="32dp"
+                android:layout_marginVertical="16dp"
+                android:enabled="true"
+                android:text="@string/option_exit" />
 
+            <TextView
+                android:id="@+id/versionNumber"
+                style="@style/Theme.BottleRocket.TextView"
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:layout_gravity="end"
+                android:layout_marginHorizontal="32dp"
+                android:layout_marginVertical="16dp"
+                android:textAlignment="textEnd"
+                android:textSize="5pt" />
+
+        </LinearLayout>
+
+    </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
