@@ -15,6 +15,10 @@
     <color name="capture_status_green_transparent">#4496F7D0</color>
     <color name="capture_status_amber_border">#FFF7C696</color>
     <color name="capture_status_amber_transparent">#44F7C696</color>
+    <color name="capture_status_red_border">#FFF79798</color>
+    <color name="capture_status_red_transparent">#44f7a597</color>
+    <color name="capture_status_blue_border">#FF96dcf7</color>
+    <color name="capture_status_blue_transparent">#447dc7e3</color>
 
     <color name="capture_status_unmatched_code">#FFEB3B</color>
 </resources>

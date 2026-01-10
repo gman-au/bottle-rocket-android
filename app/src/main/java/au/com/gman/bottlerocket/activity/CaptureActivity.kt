@@ -68,12 +68,16 @@ class CaptureActivity : AppCompatActivity() {
     private lateinit var overlayView: PageCaptureOverlayView
 
     private lateinit var cancelButton: ImageButton
+
     private lateinit var cameraExecutor: ExecutorService
 
     private lateinit var lastBarcodeDetectionResult: BarcodeDetectionResult
 
     private var imageCapture: ImageCapture? = null
+
     private var matchFound = false
+
+    private var outOfBounds = false
 
     private var codeFound = false
 
@@ -91,7 +95,7 @@ class CaptureActivity : AppCompatActivity() {
             finish()
         }
 
-        steadyFrameIndicator.setBlocked(false)
+        steadyFrameIndicator.setProcessing(false)
 
         barcodeDetector
             .setListener(object : IBarcodeDetectionListener {
@@ -100,6 +104,15 @@ class CaptureActivity : AppCompatActivity() {
 
                         codeFound = barcodeDetectionResult.codeFound
                         matchFound = barcodeDetectionResult.matchFound
+                        outOfBounds = barcodeDetectionResult.outOfBounds
+
+                        if (codeFound) {
+                            if (outOfBounds)
+                                steadyFrameIndicator.setOutOfBounds(true)
+                            else
+                                steadyFrameIndicator.setOutOfBounds(false)
+                        } else
+                            steadyFrameIndicator.setOutOfBounds(false)
 
                         if (matchFound) {
                             steadyFrameIndicator.increment()
@@ -107,8 +120,7 @@ class CaptureActivity : AppCompatActivity() {
                         } else {
                             if (codeFound) {
                                 overlayView.setUnmatchedQrCode(barcodeDetectionResult.qrCode)
-                            }
-                            else {
+                            } else {
                                 overlayView.setUnmatchedQrCode(null)
                             }
                             steadyFrameIndicator.reset()
@@ -154,7 +166,7 @@ class CaptureActivity : AppCompatActivity() {
             .setListener(object : ISteadyFrameListener {
                 override fun onSteadyResult() {
                     // prevent further activity
-                    steadyFrameIndicator.setBlocked(true)
+                    steadyFrameIndicator.setProcessing(true)
 
                     // take the photo!
                     takePhoto()
@@ -167,7 +179,7 @@ class CaptureActivity : AppCompatActivity() {
         fileIo
             .setSaveListener(object : IFileSaveListener {
                 override fun onFileSaveSuccess(uri: Uri) {
-                    steadyFrameIndicator.setBlocked(false)
+                    steadyFrameIndicator.setProcessing(false)
                     val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
                     intent.putExtra("imagePath", uri);
                     startActivity(intent);
@@ -181,7 +193,7 @@ class CaptureActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
                     }
-                    steadyFrameIndicator.setBlocked(false)
+                    steadyFrameIndicator.setProcessing(false)
                 }
             })
 
@@ -234,7 +246,7 @@ class CaptureActivity : AppCompatActivity() {
                 imageCapture =
                     ImageCapture
                         .Builder()
-                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                         .setTargetRotation(windowManager.defaultDisplay.rotation)
                         .setResolutionSelector(resolutionSelector)
                         .build()

@@ -59,6 +59,36 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
                 style = Paint.Style.FILL
             }
 
+    private val paintCaptureStatusRedBorder =
+        Paint()
+            .apply {
+                color = context.getColor(R.color.capture_status_red_border)
+                style = Paint.Style.STROKE
+                strokeWidth = 4f
+            }
+
+    private val paintCaptureStatusRedFill =
+        Paint()
+            .apply {
+                color = context.getColor(R.color.capture_status_red_transparent)
+                style = Paint.Style.FILL
+            }
+
+    private val paintCaptureStatusBlueBorder =
+        Paint()
+            .apply {
+                color = context.getColor(R.color.capture_status_blue_border)
+                style = Paint.Style.STROKE
+                strokeWidth = 4f
+            }
+
+    private val paintCaptureStatusBlueFill =
+        Paint()
+            .apply {
+                color = context.getColor(R.color.capture_status_blue_transparent)
+                style = Paint.Style.FILL
+            }
+
     private val paintStatusText =
         TextPaint()
             .apply {
@@ -177,14 +207,16 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenBorder
             CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberBorder
             CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberBorder
-            CaptureStatusEnum.PROCESSING -> paintCaptureStatusAmberBorder
+            CaptureStatusEnum.PROCESSING -> paintCaptureStatusBlueBorder
+            CaptureStatusEnum.OUT_OF_BOUNDS -> paintCaptureStatusRedBorder
         }
 
         val fillColor = when (steadyFrameIndicator.getStatus()) {
             CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenFill
             CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberFill
             CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberFill
-            CaptureStatusEnum.PROCESSING -> paintCaptureStatusAmberFill
+            CaptureStatusEnum.PROCESSING -> paintCaptureStatusBlueFill
+            CaptureStatusEnum.OUT_OF_BOUNDS -> paintCaptureStatusRedFill
         }
 
         pageBoundingBox?.let { canvas.drawPath(it.toPath(), borderColor) }
@@ -207,6 +239,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.HOLD_STEADY -> null
             CaptureStatusEnum.NOT_FOUND -> null
             CaptureStatusEnum.PROCESSING -> pageBoundingBox?.fillFromBottom(steadyFrameIndicator.getPercentage())
+            CaptureStatusEnum.OUT_OF_BOUNDS -> null
         }
 
         fillBox?.let { canvas.drawPath(it.toPath(), fillColor) }

@@ -265,6 +265,24 @@ fun RocketBoundingBox.rotateAroundCenter(
     return RocketBoundingBox(points)
 }
 
+fun RocketBoundingBox.isOutOfBounds(
+    bounds: PointF
+): Boolean {
+    return this.topLeft.isOutOfBounds(bounds) ||
+            this.topRight.isOutOfBounds(bounds) ||
+            this.bottomRight.isOutOfBounds(bounds) ||
+            this.bottomLeft.isOutOfBounds(bounds)
+}
+
+fun PointF.isOutOfBounds(
+    bounds: PointF
+): Boolean {
+    return this.x < 0 ||
+            this.x > bounds.x ||
+            this.y < 0 ||
+            this.y > bounds.y
+}
+
 private fun distance(p1: PointF, p2: PointF): Float {
     val dx = p1.x - p2.x
     val dy = p1.y - p2.y

@@ -10,13 +10,15 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
 
     private var consecutiveFramesCount: Int = 0
 
-    private val consecutiveFramesRequired: Int = 30
+    private val consecutiveFramesRequired: Int = 15
 
     private var percentageComplete: Float = 0.0F
 
     private var amberPercentageThreshold: Float = 0.33F
 
-    private var blocked: Boolean = false
+    private var isProcessing: Boolean = false
+
+    private var isOutOfBounds: Boolean = false
 
     private var listener: ISteadyFrameListener? = null
 
@@ -25,7 +27,8 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
     }
 
     override fun getStatus(): CaptureStatusEnum {
-        if (blocked) return CaptureStatusEnum.PROCESSING
+        if (isProcessing) return CaptureStatusEnum.PROCESSING
+        if (isOutOfBounds) return CaptureStatusEnum.OUT_OF_BOUNDS
         if (percentageComplete > amberPercentageThreshold) return CaptureStatusEnum.CAPTURING
         if (percentageComplete <= amberPercentageThreshold) return CaptureStatusEnum.HOLD_STEADY
 
@@ -33,7 +36,8 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
     }
 
     override fun getStatusMessage(): String {
-        if (blocked) return "Please wait..."
+        if (isProcessing) return "Please wait..."
+        if (isOutOfBounds) return "Try to fit the page in the camera view"
         if (percentageComplete > amberPercentageThreshold) return "Capturing: ${(percentageComplete * 100F).toInt()}%"
         if (percentageComplete <= amberPercentageThreshold) return "Hold steady"
 
@@ -47,10 +51,11 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
     override fun reset() {
         consecutiveFramesCount = 0
         percentageComplete = 0F
+        isOutOfBounds = false
     }
 
     override fun increment() {
-        if (!blocked) {
+        if (!isProcessing && !isOutOfBounds) {
             consecutiveFramesCount = consecutiveFramesCount + 1
             consecutiveFramesCount = min(consecutiveFramesCount, consecutiveFramesRequired)
             percentageComplete =
@@ -62,7 +67,11 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
         }
     }
 
-    override fun setBlocked(blocked: Boolean) {
-        this.blocked = blocked
+    override fun setProcessing(value: Boolean) {
+        this.isProcessing = value
+    }
+
+    override fun setOutOfBounds(value: Boolean) {
+        this.isOutOfBounds = value
     }
 }

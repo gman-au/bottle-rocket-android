@@ -6,6 +6,7 @@ import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
 import au.com.gman.bottlerocket.extensions.calculateRotationAngle
+import au.com.gman.bottlerocket.extensions.isOutOfBounds
 import au.com.gman.bottlerocket.extensions.round
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
@@ -36,6 +37,7 @@ class QrCodeHandler @Inject constructor(
     ): BarcodeDetectionResult {
         val codeFound = true
         var matchFound = false
+        var outOfBounds = false
         var pageBoundingBox: RocketBoundingBox? = null
         var pageBoundingBoxUnscaled: RocketBoundingBox? = null
         var qrCornerPointsBoxUnscaled: RocketBoundingBox? = null
@@ -57,41 +59,72 @@ class QrCodeHandler @Inject constructor(
             if (!screenDimensions.isInitialised())
                 throw IllegalStateException("Screen dimensions not initialised")
 
-            screenDimensions.recalculateScalingFactorIfRequired()
-            scalingFactorViewport = screenDimensions.getScalingFactor()
-            boundingBoxRotation = qrCornerPointsBoxUnscaled.calculateRotationAngle()
-            cameraRotation = screenDimensions.getScreenRotation()
+            screenDimensions
+                .recalculateScalingFactorIfRequired()
+
+            scalingFactorViewport =
+                screenDimensions
+                    .getScalingFactor()
+
+            boundingBoxRotation =
+                qrCornerPointsBoxUnscaled
+                    .calculateRotationAngle()
+
+            cameraRotation =
+                screenDimensions
+                    .getScreenRotation()
 
             if (scalingFactorViewport != null) {
 
-                qrCornerPointsBoxScaled = qrCornerPointsBoxUnscaled
-                    .scaleUpWithOffset(scalingFactorViewport)
+                qrCornerPointsBoxScaled =
+                    qrCornerPointsBoxUnscaled
+                        .scaleUpWithOffset(scalingFactorViewport)
+
+                if (screenDimensions.getTargetSize() == null)
+                    throw IllegalStateException("Screen dimensions not initialised")
+
+                // any qr point outside viewport should be out of bounds
+                outOfBounds =
+                    qrCornerPointsBoxScaled
+                        .isOutOfBounds(screenDimensions.getTargetSize()!!)
 
                 if (pageTemplate != null) {
 
                     // Calculate page bounds in UNSCALED (ImageAnalysis) space
-                    val rawPageBounds = pageTemplateRescaler
-                        .calculatePageBoundsFromTemplate(
-                            qrCornerPointsBoxUnscaled,
-                            RocketBoundingBox(pageTemplate.pageDimensions)
-                        )
+                    val rawPageBounds =
+                        pageTemplateRescaler
+                            .calculatePageBoundsFromTemplate(
+                                qrCornerPointsBoxUnscaled,
+                                RocketBoundingBox(pageTemplate.pageDimensions)
+                            )
 
                     // Store the unscaled version
                     pageBoundingBoxUnscaled = rawPageBounds
 
                     // Scale for preview display
-                    val scaledPageBounds = rawPageBounds
-                        .scaleUpWithOffset(scalingFactorViewport)
+                    val scaledPageBounds =
+                        rawPageBounds
+                            .scaleUpWithOffset(scalingFactorViewport)
 
                     // Apply smoothing to the SCALED version (for preview)
-                    pageBoundingBox = scaledPageBounds
-                        .aggressiveSmooth(
-                            previous = previousPageBounds,
-                            smoothFactor = 0.3f,
-                            maxJumpThreshold = 50f
-                        )
+                    pageBoundingBox =
+                        scaledPageBounds
+                            .aggressiveSmooth(
+                                previous = previousPageBounds,
+                                smoothFactor = 0.3f,
+                                maxJumpThreshold = 50f
+                            )
 
-                    pageBoundingBox = rocketBoundingBoxMedianFilter.add(pageBoundingBox)
+                    // any qr point outside viewport should be out of bounds
+                    outOfBounds =
+                        outOfBounds ||
+                                pageBoundingBox
+                                    .isOutOfBounds(screenDimensions.getTargetSize()!!)
+
+                    pageBoundingBox =
+                        rocketBoundingBoxMedianFilter
+                            .add(pageBoundingBox)
+
                     previousPageBounds = pageBoundingBox
 
                     matchFound = true
@@ -117,6 +150,7 @@ class QrCodeHandler @Inject constructor(
         return BarcodeDetectionResult(
             codeFound = codeFound,
             matchFound = matchFound,
+            outOfBounds = outOfBounds,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxUnscaled?.round(),
