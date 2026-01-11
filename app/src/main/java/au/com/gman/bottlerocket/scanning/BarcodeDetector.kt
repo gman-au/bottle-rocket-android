@@ -92,7 +92,7 @@ class BarcodeDetector @Inject constructor(
                         barcodes
                             .firstOrNull()
 
-                    val mat = imageProxy.toMat(image)!!
+                    val mat = imageProxy.toMat(image, rotationDegrees)!!
 
                     val barcodeDetectionResult =
                         qrCodeHandler

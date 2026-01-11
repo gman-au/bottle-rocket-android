@@ -10,7 +10,7 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
 
     private var consecutiveFramesCount: Int = 0
 
-    private val consecutiveFramesRequired: Int = 15
+    private val consecutiveFramesRequired: Int = 30
 
     private var percentageComplete: Float = 0.0F
 

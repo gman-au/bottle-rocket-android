@@ -111,15 +111,25 @@ class QrCodeHandler @Inject constructor(
                         edgeDetector
                             .detectEdges(mat)
                     if (detectedEdges?.size == 4) {
+                        Log.d(TAG, "Raw detected edges: $detectedEdges")
+                        Log.d(TAG, "Mat dimensions: ${mat.width()} x ${mat.height()}")
+                        Log.d(TAG, "Source dimensions: $sourceWidth x $sourceHeight")
+
                         val newPoints =
-                            detectedEdges
-                                .take(4)
-                                .map { o -> PointF(o.x.toFloat(), o.y.toFloat()) }
-                                .toTypedArray()
+                            orderPointsClockwise(
+                                detectedEdges
+                                    .take(4)
+                                    .map { o -> PointF(o.x.toFloat(), o.y.toFloat()) }
+                            )
+
+                        Log.d(TAG, "Ordered points: ${newPoints.contentToString()}")
 
                         pageBoundingBox =
                             RocketBoundingBox(newPoints)
-                                .scaleUpWithOffset(scalingFactorViewport)
+                                //.scaleUpWithOffset(scalingFactorViewport)
+
+                        Log.d(TAG, "Edge detection - unscaled: $pageBoundingBoxUnscaled")
+                        Log.d(TAG, "Edge detection - scaled: $pageBoundingBox")
                     } else {
                         // Scale for preview display
                         val scaledPageBounds =
@@ -171,7 +181,7 @@ class QrCodeHandler @Inject constructor(
         return BarcodeDetectionResult(
             codeFound = codeFound,
             matchFound = matchFound,
-            outOfBounds = outOfBounds,
+            outOfBounds = false,// outOfBounds,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxUnscaled?.round(),
@@ -183,6 +193,21 @@ class QrCodeHandler @Inject constructor(
             scalingFactor = scalingFactorViewport,
             sourceImageWidth = sourceWidth,
             sourceImageHeight = sourceHeight
+        )
+    }
+
+    private fun orderPointsClockwise(points: List<PointF>): Array<PointF> {
+        // Sort by y coordinate to get top and bottom pairs
+        val sorted = points.sortedBy { it.y }
+
+        val top = sorted.take(2).sortedBy { it.x }  // Top two, left to right
+        val bottom = sorted.takeLast(2).sortedBy { it.x }  // Bottom two, left to right
+
+        return arrayOf(
+            top[0],      // topLeft
+            top[1],      // topRight
+            bottom[1],   // bottomRight
+            bottom[0]    // bottomLeft
         )
     }
 }

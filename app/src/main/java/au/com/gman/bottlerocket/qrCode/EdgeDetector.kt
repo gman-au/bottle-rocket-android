@@ -55,7 +55,7 @@ class EdgeDetector @Inject constructor() : IEdgeDetector {
 
         gray.release()
         edges.release()
-        src.release()
+        //src.release()
 
         return docContour?.toList()
     }

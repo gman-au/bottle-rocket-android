@@ -1,12 +1,14 @@
 package au.com.gman.bottlerocket.extensions
+
 import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
+import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.imgproc.Imgproc
 
-/** Convert ImageProxy YUV planes to OpenCV Mat (BGR). */
-fun ImageProxy.toMat(image: InputImage): Mat? {
+/** Convert ImageProxy YUV planes to OpenCV Mat (BGR) with rotation applied. */
+fun ImageProxy.toMat(image: InputImage, rotationDegrees: Int): Mat? {
     try {
         val yPlane = planes[0]
         val uPlane = planes[1]
@@ -33,7 +35,35 @@ fun ImageProxy.toMat(image: InputImage): Mat? {
         Imgproc.cvtColor(yuvMat, bgrMat, Imgproc.COLOR_YUV2BGR_NV21)
 
         yuvMat.release()
-        return bgrMat
+
+        // Apply rotation to match MLKit coordinate space
+        if (rotationDegrees == 0) {
+            return bgrMat
+        }
+
+        val rotated = when (rotationDegrees) {
+            90 -> {
+                val result = Mat()
+                Core.rotate(bgrMat, result, Core.ROTATE_90_CLOCKWISE)
+                bgrMat.release()
+                result
+            }
+            180 -> {
+                val result = Mat()
+                Core.rotate(bgrMat, result, Core.ROTATE_180)
+                bgrMat.release()
+                result
+            }
+            270 -> {
+                val result = Mat()
+                Core.rotate(bgrMat, result, Core.ROTATE_90_COUNTERCLOCKWISE)
+                bgrMat.release()
+                result
+            }
+            else -> bgrMat
+        }
+
+        return rotated
     } catch (e: Exception) {
         e.printStackTrace()
         return null
