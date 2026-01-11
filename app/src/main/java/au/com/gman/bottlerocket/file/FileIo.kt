@@ -38,8 +38,10 @@ class FileIo @Inject constructor() : IFileIo {
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                // For Android 10+ (API 29+)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BottleRocket")
+                    put(MediaStore.Images.Media.IS_PENDING, 1) // Mark as pending while writing
                 }
             }
 
@@ -55,6 +57,13 @@ class FileIo @Inject constructor() : IFileIo {
                                 Bitmap.CompressFormat.JPEG, 95, outputStream
                             )
                     }
+
+                // Mark as complete (Android 10+)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    contentResolver.update(it, contentValues, null, null)
+                }
 
                 Log.d(TAG, "File saved: $uri")
                 listener?.onFileSaveSuccess(uri)
