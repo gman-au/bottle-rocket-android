@@ -6,12 +6,9 @@ import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
-import au.com.gman.bottlerocket.extensions.calculateRotationAngle
 import au.com.gman.bottlerocket.extensions.isOutOfBounds
-import au.com.gman.bottlerocket.extensions.round
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
-import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
@@ -22,7 +19,6 @@ import javax.inject.Inject
 
 class QrCodeHandler @Inject constructor(
     private val screenDimensions: IScreenDimensions,
-    private val pageTemplateRescaler: IPageTemplateRescaler,
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val edgeDetector: IEdgeDetector
@@ -40,105 +36,96 @@ class QrCodeHandler @Inject constructor(
         sourceWidth: Int,
         sourceHeight: Int
     ): BarcodeDetectionResult {
-        val codeFound = true
+        var codeFound = true
         var matchFound = false
         var outOfBounds = false
-        var pageBoundingBox: RocketBoundingBox? = null
-        var pageBoundingBoxUnscaled: RocketBoundingBox? = null
-        var qrCornerPointsBoxUnscaled: RocketBoundingBox? = null
-        var qrCornerPointsBoxScaled: RocketBoundingBox? = null
+        var pageBoundingBoxPreview: RocketBoundingBox? = null
+        var pageBoundingBoxCamera: RocketBoundingBox? = null
+        var qrBoundingBoxCamera: RocketBoundingBox? = null
+        var qrBoundingBoxPreview: RocketBoundingBox? = null
         var qrCodeValue: String? = null
         var cameraRotation: Float = 0F
-        var boundingBoxRotation: Float = 0F
-        var scalingFactorViewport: ScaleAndOffset? = null
+        var scalingFactor: ScaleAndOffset? = null
 
         val pageTemplate = qrCodeTemplateMatcher.tryMatch(barcode?.rawValue ?: "")
 
-        if (barcode != null) {
-            qrCodeValue = barcode.rawValue
-            Log.d(TAG, "QR code value found: $qrCodeValue")
+        if (!screenDimensions.isInitialised())
+            throw IllegalStateException("Screen dimensions not initialised")
 
-            val qrCornerPoints = RocketBoundingBox(barcode.cornerPoints)
-            qrCornerPointsBoxUnscaled = qrCornerPoints
+        screenDimensions
+            .recalculateScalingFactorIfRequired()
 
-            if (!screenDimensions.isInitialised())
-                throw IllegalStateException("Screen dimensions not initialised")
-
+        scalingFactor =
             screenDimensions
-                .recalculateScalingFactorIfRequired()
+                .getScalingFactor()
 
-            scalingFactorViewport =
-                screenDimensions
-                    .getScalingFactor()
+        if (scalingFactor != null) {
 
-            boundingBoxRotation =
-                qrCornerPointsBoxUnscaled
-                    .calculateRotationAngle()
+            if (barcode != null) {
 
-            cameraRotation =
-                screenDimensions
-                    .getScreenRotation()
+                qrCodeValue = barcode.rawValue
+                Log.d(TAG, "QR code value found: $qrCodeValue")
 
-            if (scalingFactorViewport != null) {
+                val qrCornerPoints = RocketBoundingBox(barcode.cornerPoints)
 
-                qrCornerPointsBoxScaled =
-                    qrCornerPointsBoxUnscaled
-                        .scaleUpWithOffset(scalingFactorViewport)
+                // Get QR code bounding box in camera space
+                qrCornerPoints.let { points ->
+                    qrBoundingBoxCamera = RocketBoundingBox(points)
+                    qrBoundingBoxPreview = qrBoundingBoxCamera.scaleUpWithOffset(scalingFactor)
+
+                    Log.d(TAG, "QR camera: $qrBoundingBoxCamera")
+                    Log.d(TAG, "QR preview: $qrBoundingBoxPreview")
+                }
+
+                cameraRotation =
+                    screenDimensions
+                        .getScreenRotation()
+
+                qrBoundingBoxPreview =
+                    qrBoundingBoxCamera!!
+                        .scaleUpWithOffset(scalingFactor)
 
                 if (screenDimensions.getTargetSize() == null)
                     throw IllegalStateException("Screen dimensions not initialised")
 
                 // any qr point outside viewport should be out of bounds
                 outOfBounds =
-                    qrCornerPointsBoxScaled
+                    qrBoundingBoxPreview
                         .isOutOfBounds(screenDimensions.getTargetSize()!!)
 
                 if (pageTemplate != null) {
-
-                    // Calculate page bounds in UNSCALED (ImageAnalysis) space
-                    val rawPageBounds =
-                        pageTemplateRescaler
-                            .calculatePageBoundsFromTemplate(
-                                qrCornerPointsBoxUnscaled,
-                                RocketBoundingBox(pageTemplate.pageDimensions)
-                            )
-
-                    // Store the unscaled version
-                    pageBoundingBoxUnscaled = rawPageBounds
 
                     // openCV edge detection
                     val detectedEdges =
                         edgeDetector
                             .detectEdges(mat)
+
                     if (detectedEdges?.size == 4) {
-                        Log.d(TAG, "Raw detected edges: $detectedEdges")
-                        Log.d(TAG, "Mat dimensions: ${mat.width()} x ${mat.height()}")
-                        Log.d(TAG, "Source dimensions: $sourceWidth x $sourceHeight")
+                        Log.d(TAG, "Raw edges: $detectedEdges")
 
-                        val newPoints =
-                            orderPointsClockwise(
-                                detectedEdges
-                                    .take(4)
-                                    .map { o -> PointF(o.x.toFloat(), o.y.toFloat()) }
-                            )
+                        val orderedPoints = orderPointsClockwise(
+                            detectedEdges.map { PointF(it.x.toFloat(), it.y.toFloat()) }
+                        )
 
-                        Log.d(TAG, "Ordered points: ${newPoints.contentToString()}")
+                        // Camera space (Mat coordinates)
+                        pageBoundingBoxCamera = RocketBoundingBox(orderedPoints)
 
-                        pageBoundingBox =
-                            RocketBoundingBox(newPoints)
-                                //.scaleUpWithOffset(scalingFactorViewport)
+                        // Preview space (scaled for display)
+                        pageBoundingBoxPreview =
+                            pageBoundingBoxCamera
+                                .scaleUpWithOffset(scalingFactor)
 
-                        Log.d(TAG, "Edge detection - unscaled: $pageBoundingBoxUnscaled")
-                        Log.d(TAG, "Edge detection - scaled: $pageBoundingBox")
-                    } else {
-                        // Scale for preview display
-                        val scaledPageBounds =
-                            rawPageBounds
-                                .scaleUpWithOffset(scalingFactorViewport)
+                        pageBoundingBoxPreview =
+                            rocketBoundingBoxMedianFilter
+                                .add(pageBoundingBoxPreview)
+
+                        previousPageBounds = pageBoundingBoxPreview
+
+                        matchFound = true
 
                         // Apply smoothing to the SCALED version (for preview)
-                        pageBoundingBox =
-                            scaledPageBounds
+                        pageBoundingBoxPreview =
+                            pageBoundingBoxPreview
                                 .aggressiveSmooth(
                                     previous = previousPageBounds,
                                     smoothFactor = 0.3f,
@@ -147,24 +134,13 @@ class QrCodeHandler @Inject constructor(
                     }
 
                     // any qr point outside viewport should be out of bounds
+                    /*
                     outOfBounds =
                         outOfBounds ||
-                                pageBoundingBox
+                                pageBoundingBoxPreview
                                     .isOutOfBounds(screenDimensions.getTargetSize()!!)
 
-                    pageBoundingBox =
-                        rocketBoundingBoxMedianFilter
-                            .add(pageBoundingBox)
-
-                    previousPageBounds = pageBoundingBox
-
-                    matchFound = true
-
-                    Log.d(
-                        TAG,
-                        "Unscaled page bounds (ImageAnalysis space): $pageBoundingBoxUnscaled"
-                    )
-                    Log.d(TAG, "Scaled page bounds (Preview space): $pageBoundingBox")
+                     */
                 } else {
                     previousPageBounds = null
                     rocketBoundingBoxMedianFilter.reset()
@@ -174,6 +150,7 @@ class QrCodeHandler @Inject constructor(
                 rocketBoundingBoxMedianFilter.reset()
             }
         } else {
+            codeFound = false
             previousPageBounds = null
             rocketBoundingBoxMedianFilter.reset()
         }
@@ -184,24 +161,22 @@ class QrCodeHandler @Inject constructor(
             outOfBounds = false,// outOfBounds,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
-            pageOverlayPath = pageBoundingBoxUnscaled?.round(),
-            pageOverlayPathPreview = pageBoundingBox?.round(),
-            qrCodeOverlayPath = qrCornerPointsBoxUnscaled?.round(),
-            qrCodeOverlayPathPreview = qrCornerPointsBoxScaled?.round(),
+            pageOverlayPath = pageBoundingBoxCamera,
+            qrCodeOverlayPath = qrBoundingBoxCamera,
+            pageOverlayPathPreview = pageBoundingBoxPreview,
+            qrCodeOverlayPathPreview = qrBoundingBoxPreview,
             cameraRotation = cameraRotation,
-            boundingBoxRotation = boundingBoxRotation,
-            scalingFactor = scalingFactorViewport,
+            boundingBoxRotation = 0F,
+            scalingFactor = scalingFactor,
             sourceImageWidth = sourceWidth,
             sourceImageHeight = sourceHeight
         )
     }
 
     private fun orderPointsClockwise(points: List<PointF>): Array<PointF> {
-        // Sort by y coordinate to get top and bottom pairs
         val sorted = points.sortedBy { it.y }
-
-        val top = sorted.take(2).sortedBy { it.x }  // Top two, left to right
-        val bottom = sorted.takeLast(2).sortedBy { it.x }  // Bottom two, left to right
+        val top = sorted.take(2).sortedBy { it.x }
+        val bottom = sorted.takeLast(2).sortedBy { it.x }
 
         return arrayOf(
             top[0],      // topLeft

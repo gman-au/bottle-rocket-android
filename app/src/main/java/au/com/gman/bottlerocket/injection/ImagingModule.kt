@@ -1,10 +1,8 @@
 package au.com.gman.bottlerocket.injection
 import au.com.gman.bottlerocket.imaging.ImageEnhancer
 import au.com.gman.bottlerocket.imaging.ImageProcessor
-import au.com.gman.bottlerocket.imaging.PageTemplateRescaler
 import au.com.gman.bottlerocket.interfaces.IImageEnhancer
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
-import au.com.gman.bottlerocket.interfaces.IPageTemplateRescaler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -23,9 +21,4 @@ abstract class ImagingModule {
     abstract fun bindImageProcessor(
         imageProcessor: ImageProcessor
     ) : IImageProcessor
-
-    @Binds
-    abstract fun bindPageTemplateRescaler(
-        pageTemplateRescaler: PageTemplateRescaler
-    ) : IPageTemplateRescaler
 }
