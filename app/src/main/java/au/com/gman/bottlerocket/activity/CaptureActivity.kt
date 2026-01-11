@@ -7,7 +7,9 @@ import android.graphics.Bitmap
 import android.graphics.PointF
 import android.hardware.camera2.CaptureRequest
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.Range
 import android.widget.ImageButton
 import android.widget.Toast
@@ -84,6 +86,7 @@ class CaptureActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture)
+        checkStoragePermission()
 
         previewView = findViewById(R.id.previewView)
         overlayView = findViewById(R.id.overlayView)
@@ -137,11 +140,6 @@ class CaptureActivity : AppCompatActivity() {
         imageProcessor
             .setListener(object : IImageProcessingListener {
                 override fun onProcessingSuccess(processedBitmap: Bitmap) {
-                    runOnUiThread {
-                        Toast.makeText(baseContext, "Processed successfully...", Toast.LENGTH_SHORT)
-                            .show()
-                    }
-
                     fileIo
                         .saveImage(
                             processedBitmap,
@@ -337,8 +335,6 @@ class CaptureActivity : AppCompatActivity() {
                     }
 
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                        //Toast.makeText(baseContext, "Processing...", Toast.LENGTH_SHORT).show()
-
                         cameraExecutor
                             .execute {
                                 imageProcessor
@@ -358,17 +354,42 @@ class CaptureActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
-        permissions: Array<String>,
+        permissions: Array<out String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera()
+
+        if (requestCode == STORAGE_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted - proceed with save
             } else {
-                Toast.makeText(this, "Permissions not granted", Toast.LENGTH_SHORT).show()
-                finish()
+                Toast.makeText(this, "Storage permission required", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun checkStoragePermission() {
+        Log.d(TAG, "Android SDK: ${Build.VERSION.SDK_INT}")
+        Log.d(TAG, "Android Version: ${Build.VERSION.RELEASE}")
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+
+            Log.d(TAG, "Has WRITE_EXTERNAL_STORAGE permission: $hasPermission")
+
+            if (!hasPermission) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    STORAGE_PERMISSION_CODE
+                )
+            }
+        } else {
+            Log.d(TAG, "Android 10+, no permission needed for MediaStore")
         }
     }
 
@@ -382,5 +403,7 @@ class CaptureActivity : AppCompatActivity() {
         private const val REQUEST_CODE_PERMISSIONS = 10
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+
+        private const val STORAGE_PERMISSION_CODE = 100
     }
 }
