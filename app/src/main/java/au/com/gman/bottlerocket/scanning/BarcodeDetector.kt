@@ -4,10 +4,11 @@ import android.graphics.PointF
 import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
+import au.com.gman.bottlerocket.extensions.toMat
+import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
@@ -91,10 +92,13 @@ class BarcodeDetector @Inject constructor(
                         barcodes
                             .firstOrNull()
 
+                    val mat = imageProxy.toMat(image, rotationDegrees)!!
+
                     val barcodeDetectionResult =
                         qrCodeHandler
                             .handle(
                                 barcode,
+                                mat,
                                 imageWidth,
                                 imageHeight
                             )

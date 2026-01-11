@@ -16,5 +16,7 @@ interface ISteadyFrameIndicator {
 
     fun increment()
 
-    fun setBlocked(blocked: Boolean)
+    fun setProcessing(value: Boolean)
+
+    fun setOutOfBounds(value: Boolean)
 }
