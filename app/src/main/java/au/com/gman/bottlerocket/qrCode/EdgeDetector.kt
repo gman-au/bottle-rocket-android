@@ -1,8 +1,6 @@
 package au.com.gman.bottlerocket.qrCode
 
-import android.graphics.Bitmap
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
-import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint
 import org.opencv.core.MatOfPoint2f

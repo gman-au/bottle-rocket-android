@@ -11,6 +11,7 @@ import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
+import au.com.gman.bottlerocket.interfaces.IQrPositionalValidator
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -21,6 +22,7 @@ class QrCodeHandler @Inject constructor(
     private val screenDimensions: IScreenDimensions,
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
+    private val qrPositionalValidator: IQrPositionalValidator,
     private val edgeDetector: IEdgeDetector
 ) : IQrCodeHandler {
 
@@ -68,10 +70,32 @@ class QrCodeHandler @Inject constructor(
 
                 val qrCornerPoints = RocketBoundingBox(barcode.cornerPoints)
 
+                if (screenDimensions.getTargetSize() == null)
+                    throw IllegalStateException("Screen dimensions not initialised")
+
+                if (screenDimensions.getSourceSize() == null)
+                    throw IllegalStateException("Screen dimensions not initialised")
+
+                val targetSize =
+                    screenDimensions
+                        .getTargetSize()!!
+
+                val sourceSize =
+                    screenDimensions
+                        .getSourceSize()!!
+
                 // Get QR code bounding box in camera space
                 qrCornerPoints.let { points ->
                     qrBoundingBoxCamera = RocketBoundingBox(points)
-                    qrBoundingBoxPreview = qrBoundingBoxCamera.scaleUpWithOffset(scalingFactor)
+
+                    qrBoundingBoxPreview =
+                        qrBoundingBoxCamera
+                            .scaleUpWithOffset(scalingFactor)
+
+                    // Check if QR code is out of bounds
+                    outOfBounds =
+                        qrBoundingBoxCamera
+                            .isOutOfBounds(sourceSize)
 
                     Log.d(TAG, "QR camera: $qrBoundingBoxCamera")
                     Log.d(TAG, "QR preview: $qrBoundingBoxPreview")
@@ -84,14 +108,6 @@ class QrCodeHandler @Inject constructor(
                 qrBoundingBoxPreview =
                     qrBoundingBoxCamera!!
                         .scaleUpWithOffset(scalingFactor)
-
-                if (screenDimensions.getTargetSize() == null)
-                    throw IllegalStateException("Screen dimensions not initialised")
-
-                // any qr point outside viewport should be out of bounds
-                outOfBounds =
-                    qrBoundingBoxPreview
-                        .isOutOfBounds(screenDimensions.getTargetSize()!!)
 
                 if (pageTemplate != null) {
 
@@ -119,28 +135,46 @@ class QrCodeHandler @Inject constructor(
                             rocketBoundingBoxMedianFilter
                                 .add(pageBoundingBoxPreview)
 
+                        Log.d(TAG, "Page camera: $pageBoundingBoxCamera")
+                        Log.d(TAG, "Page preview: $pageBoundingBoxPreview")
+
+                        // VALIDATION 1: Check if page bounding box is out of bounds
+                        val pageOutOfBounds =
+                            pageBoundingBoxCamera
+                                .isOutOfBounds(sourceSize)
+
+                        outOfBounds = outOfBounds || pageOutOfBounds
+
+                        Log.d(TAG, "Page out of bounds: $pageOutOfBounds")
+
                         previousPageBounds = pageBoundingBoxPreview
 
-                        matchFound = true
+                        // VALIDATION 2: Check if page bounding box is inside QR code bounding box
+                        val qrInsidePage =
+                            qrPositionalValidator
+                                .isBoxInsideBox(qrBoundingBoxCamera, pageBoundingBoxCamera)
 
-                        // Apply smoothing to the SCALED version (for preview)
-                        pageBoundingBoxPreview =
-                            pageBoundingBoxPreview
-                                .aggressiveSmooth(
-                                    previous = previousPageBounds,
-                                    smoothFactor = 0.3f,
-                                    maxJumpThreshold = 50f
-                                )
-                    }
+                        Log.d(TAG, "QR inside page: $qrInsidePage")
 
-                    // any qr point outside viewport should be out of bounds
-                    /*
-                    outOfBounds =
-                        outOfBounds ||
+                        if (qrInsidePage) {
+                            matchFound = true
+
+                            // Apply smoothing to the SCALED version (for preview)
+                            pageBoundingBoxPreview =
                                 pageBoundingBoxPreview
-                                    .isOutOfBounds(screenDimensions.getTargetSize()!!)
-
-                     */
+                                    .aggressiveSmooth(
+                                        previous = previousPageBounds,
+                                        smoothFactor = 0.3f,
+                                        maxJumpThreshold = 50f
+                                    )
+                        }
+                        else {
+                            codeFound = false
+                            pageBoundingBoxPreview = null
+                            previousPageBounds = null
+                            rocketBoundingBoxMedianFilter.reset()
+                        }
+                    }
                 } else {
                     previousPageBounds = null
                     rocketBoundingBoxMedianFilter.reset()
@@ -158,7 +192,7 @@ class QrCodeHandler @Inject constructor(
         return BarcodeDetectionResult(
             codeFound = codeFound,
             matchFound = matchFound,
-            outOfBounds = false,// outOfBounds,
+            outOfBounds = false, //outOfBounds,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxCamera,

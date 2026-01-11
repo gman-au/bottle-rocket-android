@@ -2,9 +2,11 @@ package au.com.gman.bottlerocket.injection
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
+import au.com.gman.bottlerocket.interfaces.IQrPositionalValidator
 import au.com.gman.bottlerocket.qrCode.EdgeDetector
 import au.com.gman.bottlerocket.qrCode.QrCodeHandler
 import au.com.gman.bottlerocket.qrCode.QrCodeTemplateMatcher
+import au.com.gman.bottlerocket.qrCode.QrPositionalValidator
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -24,6 +26,11 @@ abstract class QrModule {
     abstract fun bindQrCodeTemplateMatcher(
         templateMapper: QrCodeTemplateMatcher
     ) : IQrCodeTemplateMatcher
+
+    @Binds
+    abstract fun bindQrPositionalValidator(
+        qrPositionalValidator: QrPositionalValidator
+    ) : IQrPositionalValidator
 
     @Binds
     abstract fun bindEdgeDetector(
