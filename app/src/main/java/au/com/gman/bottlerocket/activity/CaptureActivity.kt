@@ -30,6 +30,9 @@ import androidx.core.content.ContextCompat
 import au.com.gman.bottlerocket.PageCaptureOverlayView
 import au.com.gman.bottlerocket.R
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
+import au.com.gman.bottlerocket.extensions.toApiString
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
 import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
 import au.com.gman.bottlerocket.interfaces.IFileSaveListener
@@ -74,6 +77,8 @@ class CaptureActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
 
     private lateinit var lastBarcodeDetectionResult: BarcodeDetectionResult
+
+    private var lastEnhancedQrBoundingBox: RocketBoundingBox? = null
 
     private var imageCapture: ImageCapture? = null
 
@@ -139,10 +144,11 @@ class CaptureActivity : AppCompatActivity() {
 
         imageProcessor
             .setListener(object : IImageProcessingListener {
-                override fun onProcessingSuccess(processedBitmap: Bitmap) {
+                override fun onProcessingSuccess(processedResponse: ImageEnhancementResponse) {
+                    lastEnhancedQrBoundingBox = processedResponse.scaledQrBox
                     fileIo
                         .saveImage(
-                            processedBitmap,
+                            processedResponse.bitmap,
                             FILENAME_FORMAT,
                             contentResolver
                         )
@@ -180,6 +186,8 @@ class CaptureActivity : AppCompatActivity() {
                     steadyFrameIndicator.setProcessing(false)
                     val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
                     intent.putExtra("imagePath", uri);
+                    intent.putExtra("qrCode", lastBarcodeDetectionResult.qrCode)
+                    intent.putExtra("qrBoundingBox", lastEnhancedQrBoundingBox?.toApiString())
                     startActivity(intent);
                 }
 

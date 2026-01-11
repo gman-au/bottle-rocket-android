@@ -10,6 +10,8 @@ interface IApiService {
 
     fun uploadCapture(
         imageUri: Uri,
+        qrCode: String,
+        qrBoundingBox: String,
         cacheDir: File,
         contentResolver: ContentResolver
     )

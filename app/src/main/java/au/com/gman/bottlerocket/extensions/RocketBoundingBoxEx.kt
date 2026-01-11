@@ -8,7 +8,6 @@ import android.graphics.Rect
 import androidx.core.graphics.toPointF
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
-import kotlin.math.atan2
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -81,83 +80,6 @@ fun RocketBoundingBox.scaleUpWithOffset(scaleAndOffset: ScaleAndOffset): RocketB
     )
 }
 
-fun RocketBoundingBox.scaleDownWithOffset(scaleAndOffset: ScaleAndOffset): RocketBoundingBox {
-    val offsetInSourceSpace = PointF(
-        -scaleAndOffset.offset.x / scaleAndOffset.scale.x,
-        -scaleAndOffset.offset.y / scaleAndOffset.scale.y
-    )
-
-    return RocketBoundingBox(
-        topLeft = PointF(
-            (topLeft.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
-            (topLeft.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
-        ),
-        topRight = PointF(
-            (topRight.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
-            (topRight.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
-        ),
-        bottomRight = PointF(
-            (bottomRight.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
-            (bottomRight.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
-        ),
-        bottomLeft = PointF(
-            (bottomLeft.x / scaleAndOffset.scale.x) + offsetInSourceSpace.x,
-            (bottomLeft.y / scaleAndOffset.scale.y) + offsetInSourceSpace.y
-        )
-    )
-}
-
-fun calculateViewportToBitmapScaling(
-    viewportWidth: Float,
-    viewportHeight: Float,
-    bitmapWidth: Float,
-    bitmapHeight: Float,
-    rotationAngle: Int = 0
-): ScaleAndOffset {
-    // Account for rotation
-    val (actualBitmapW, actualBitmapH) = if (rotationAngle % 180 != 0) {
-        Pair(bitmapHeight, bitmapWidth)
-    } else {
-        Pair(bitmapWidth, bitmapHeight)
-    }
-
-    val viewportAspect = viewportWidth / viewportHeight
-    val bitmapAspect = actualBitmapW / actualBitmapH
-
-    val scale: PointF
-    val offset: PointF
-
-    if (bitmapAspect > viewportAspect) {
-        // Bitmap is wider - it was horizontally cropped to fit viewport
-        val uniformScale = actualBitmapH / viewportHeight
-        scale = PointF(uniformScale, uniformScale)
-
-        val scaledWidth = viewportWidth * uniformScale
-        val cropAmount = (actualBitmapW - scaledWidth) / 2f
-        offset = PointF(cropAmount, 0f)
-
-    } else {
-        // Bitmap is taller - it was vertically cropped to fit viewport
-        val uniformScale = actualBitmapW / viewportWidth
-        scale = PointF(uniformScale, uniformScale)
-
-        val scaledHeight = viewportHeight * uniformScale
-        val cropAmount = (actualBitmapH - scaledHeight) / 2f
-        offset = PointF(0f, cropAmount)
-    }
-
-    return ScaleAndOffset(scale, offset)
-}
-
-fun RocketBoundingBox.toFloatArray(): FloatArray {
-    return floatArrayOf(
-        topLeft.x, topLeft.y,
-        topRight.x, topRight.y,
-        bottomRight.x, bottomRight.y,
-        bottomLeft.x, bottomLeft.y
-    )
-}
-
 fun RocketBoundingBox.toRect(): Rect {
     return Rect(
         topLeft.x.toInt(), topLeft.y.toInt(),
@@ -175,37 +97,6 @@ fun RocketBoundingBox.toPath(): Path {
     path.close()
 
     return path
-}
-
-fun RocketBoundingBox.calculateRotationAngle(): Float {
-    val deltaX = (topRight.x - topLeft.x)
-    val deltaY = (topRight.y - topLeft.y)
-
-    val angleRadians = atan2(deltaY, deltaX)
-    val angleDegrees = Math.toDegrees(angleRadians.toDouble()).toFloat()
-
-    return angleDegrees
-}
-
-fun RocketBoundingBox.applyRotation(angle: Float, pivot: PointF? = null): RocketBoundingBox {
-    val actualPivot = pivot ?: PointF(
-        (topLeft.x + bottomRight.x) / 2f,
-        (topLeft.y + bottomRight.y) / 2f
-    )
-
-    val matrix = Matrix()
-    matrix.setRotate(angle, actualPivot.x, actualPivot.y)
-
-    val points = floatArrayOf(
-        topLeft.x, topLeft.y,
-        topRight.x, topRight.y,
-        bottomRight.x, bottomRight.y,
-        bottomLeft.x, bottomLeft.y
-    )
-
-    matrix.mapPoints(points)
-
-    return RocketBoundingBox(points)
 }
 
 fun RocketBoundingBox.fillFromBottom(fillPercentage: Float): RocketBoundingBox {
@@ -242,27 +133,12 @@ fun toPointArray(points: Array<out Point>?): Array<Point> {
     return points?.toList()?.toTypedArray() ?: arrayOf()
 }
 
-fun RocketBoundingBox.rotateAroundCenter(
-    degrees: Float,
-    bitmapWidth: Int,
-    bitmapHeight: Int
-): RocketBoundingBox {
-    val centerX = bitmapWidth / 2f
-    val centerY = bitmapHeight / 2f
 
-    val matrix = Matrix()
-    matrix.setRotate(degrees, centerX, centerY)
-
-    val points = floatArrayOf(
-        topLeft.x, topLeft.y,
-        topRight.x, topRight.y,
-        bottomRight.x, bottomRight.y,
-        bottomLeft.x, bottomLeft.y
-    )
-
-    matrix.mapPoints(points)
-
-    return RocketBoundingBox(points)
+fun RocketBoundingBox.toApiString() : String = buildString {
+    append("${topLeft.x},${topLeft.y},")
+    append("${topRight.x},${topRight.y},")
+    append("${bottomRight.x},${bottomRight.y},")
+    append("${bottomLeft.x},${bottomLeft.y}")
 }
 
 fun RocketBoundingBox.isOutOfBounds(
@@ -272,6 +148,63 @@ fun RocketBoundingBox.isOutOfBounds(
             this.topRight.isOutOfBounds(bounds) ||
             this.bottomRight.isOutOfBounds(bounds) ||
             this.bottomLeft.isOutOfBounds(bounds)
+}
+
+fun RocketBoundingBox.matchQrToOverlayTransform(pageOverlay: RocketBoundingBox) : RocketBoundingBox {
+    val topWidth = distance(pageOverlay.topLeft, pageOverlay.topRight)
+    val bottomWidth = distance(pageOverlay.bottomLeft, pageOverlay.bottomRight)
+    val leftHeight = distance(pageOverlay.topLeft, pageOverlay.bottomLeft)
+    val rightHeight = distance(pageOverlay.topRight, pageOverlay.bottomRight)
+
+    val avgWidth = (topWidth + bottomWidth) / 2f
+    val avgHeight = (leftHeight + rightHeight) / 2f
+
+    val maxDimension = 2048
+    val scale = if (avgWidth > avgHeight) {
+        maxDimension / avgWidth
+    } else {
+        maxDimension / avgHeight
+    }
+
+    val outputWidth = (avgWidth * scale).toInt()
+    val outputHeight = (avgHeight * scale).toInt()
+
+    val srcCorners = floatArrayOf(
+        pageOverlay.topLeft.x, pageOverlay.topLeft.y,
+        pageOverlay.topRight.x, pageOverlay.topRight.y,
+        pageOverlay.bottomRight.x, pageOverlay.bottomRight.y,
+        pageOverlay.bottomLeft.x, pageOverlay.bottomLeft.y
+    )
+
+    val dstCorners = floatArrayOf(
+        0f, 0f,
+        outputWidth.toFloat(), 0f,
+        outputWidth.toFloat(), outputHeight.toFloat(),
+        0f, outputHeight.toFloat()
+    )
+
+    val transformMatrix = Matrix()
+    transformMatrix.setPolyToPoly(srcCorners, 0, dstCorners, 0, 4)
+
+    // Transform the QR box using the same matrix
+    val qrBoxTransformed = this.let { qrBox ->
+        val points = floatArrayOf(
+            qrBox.topLeft.x, qrBox.topLeft.y,
+            qrBox.topRight.x, qrBox.topRight.y,
+            qrBox.bottomRight.x, qrBox.bottomRight.y,
+            qrBox.bottomLeft.x, qrBox.bottomLeft.y
+        )
+        transformMatrix.mapPoints(points)
+
+        RocketBoundingBox(
+            topLeft = PointF(points[0], points[1]),
+            topRight = PointF(points[2], points[3]),
+            bottomRight = PointF(points[4], points[5]),
+            bottomLeft = PointF(points[6], points[7])
+        )
+    }
+
+    return qrBoxTransformed
 }
 
 fun PointF.isOutOfBounds(

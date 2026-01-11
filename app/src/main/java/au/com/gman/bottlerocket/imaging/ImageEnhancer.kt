@@ -4,10 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.PointF
 import android.util.Log
 import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
-import au.com.gman.bottlerocket.extensions.applyRotation
 import au.com.gman.bottlerocket.extensions.cropToPageBounds
 import au.com.gman.bottlerocket.extensions.enhanceImage
+import au.com.gman.bottlerocket.extensions.matchQrToOverlayTransform
 import au.com.gman.bottlerocket.extensions.rotate
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IImageEnhancer
@@ -22,7 +23,7 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
     override fun processImageWithMatchedTemplate(
         bitmap: Bitmap,
         detectionResult: BarcodeDetectionResult
-    ): Bitmap? {
+    ): ImageEnhancementResponse? {
 
         if (!detectionResult.matchFound ||
             detectionResult.pageOverlayPath == null ||
@@ -60,59 +61,46 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
 
         Log.d(TAG, "Scale factors: X=$scaleX, Y=$scaleY")
 
-        // Scale the overlay from ImageAnalysis coordinates to bitmap coordinates
-        val scaledOverlay = detectionResult.pageOverlayPath.scaleUpWithOffset(
+        val scaleFactor =
             ScaleAndOffset(
                 PointF(scaleX, scaleY),
                 PointF(0F, 0F)
             )
-        )
 
-        val scaledQrOverlay = detectionResult.qrCodeOverlayPath?.scaleUpWithOffset(
-            ScaleAndOffset(
-                PointF(scaleX, scaleY),
-                PointF(0F, 0F)
-            )
-        )
+        // Scale the overlay from ImageAnalysis coordinates to bitmap coordinates
+        val scaledPageOverlay =
+            detectionResult
+                .pageOverlayPath
+                .scaleUpWithOffset(scaleFactor)
+
+        // Scale the QR overlay the same way
+        val scaledQrOverlay =
+            detectionResult
+                .qrCodeOverlayPath
+                ?.scaleUpWithOffset(scaleFactor)
 
         Log.d(TAG, "Original overlay: ${detectionResult.pageOverlayPath}")
-        Log.d(TAG, "Scaled overlay: $scaledOverlay")
-
-        // Apply rotation if needed
-        val finalOverlay = if (detectionResult.boundingBoxRotation != 0f) {
-            scaledOverlay.applyRotation(
-                -detectionResult.boundingBoxRotation,
-                PointF(
-                    rotatedBitmap.width.toFloat() / 2f,
-                    rotatedBitmap.height.toFloat() / 2f
-                )
-            )
-        } else {
-            scaledOverlay
-        }
-
-        val finalQrOverlay = if (detectionResult.boundingBoxRotation != 0f) {
-            scaledQrOverlay?.applyRotation(
-                -detectionResult.boundingBoxRotation,
-                PointF(
-                    rotatedBitmap.width.toFloat() / 2f,
-                    rotatedBitmap.height.toFloat() / 2f
-                )
-            )
-        } else {
-            scaledQrOverlay
-        }
+        Log.d(TAG, "Scaled overlay: $scaledPageOverlay")
+        Log.d(TAG, "Original QR overlay: ${detectionResult.qrCodeOverlayPath}")
+        Log.d(TAG, "Scaled QR overlay: $scaledQrOverlay")
 
         val enhancedBitmap =
             rotatedBitmap
                 .enhanceImage()
-                    //finalQrOverlay,
-                    //finalOverlay
+        //finalQrOverlay,
+        //finalOverlay
+
+        val qrBoxTransformed =
+            scaledQrOverlay
+                ?.matchQrToOverlayTransform(scaledPageOverlay)
 
         val croppedBitmap =
             enhancedBitmap
-                .cropToPageBounds(finalOverlay)
+                .cropToPageBounds(scaledPageOverlay)
 
-        return croppedBitmap
+        return ImageEnhancementResponse(
+            bitmap = croppedBitmap,
+            scaledQrBox = qrBoxTransformed
+        )
     }
 }

@@ -19,6 +19,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -127,6 +128,8 @@ class ApiService @Inject constructor(
 
     override fun uploadCapture(
         imageUri: Uri,
+        qrCode: String,
+        qrBoundingBox: String,
         cacheDir: File,
         contentResolver: ContentResolver
     ) {
@@ -142,10 +145,10 @@ class ApiService @Inject constructor(
                 val requestFile =
                     file
                         .asRequestBody(
-                            "image/*".toMediaTypeOrNull()
+                            "image/jpg".toMediaTypeOrNull()
                         )
 
-                val body =
+                val imagePart =
                     MultipartBody
                         .Part
                         .createFormData(
@@ -154,10 +157,13 @@ class ApiService @Inject constructor(
                             requestFile
                         )
 
+                val qrCodePart = qrCode.toRequestBody("text/plain".toMediaTypeOrNull())
+                val qrBoundingBoxPart = qrBoundingBox.toRequestBody("text/plain".toMediaTypeOrNull())
+
                 // Make actual API call
                 val httpResponse =
                     retrofitApi
-                        .apiCaptureProcess(body)
+                        .apiCaptureProcess(imagePart, qrCodePart, qrBoundingBoxPart)
 
                 // Delete temp file
                 file
