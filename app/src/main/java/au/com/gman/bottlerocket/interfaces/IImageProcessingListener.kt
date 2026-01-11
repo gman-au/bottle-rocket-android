@@ -1,9 +1,9 @@
 package au.com.gman.bottlerocket.interfaces
 
-import android.graphics.Bitmap
+import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 
 interface IImageProcessingListener {
-    fun onProcessingSuccess(processedBitmap: Bitmap)
+    fun onProcessingSuccess(processedResponse: ImageEnhancementResponse)
 
     fun onProcessingFailure()
 }

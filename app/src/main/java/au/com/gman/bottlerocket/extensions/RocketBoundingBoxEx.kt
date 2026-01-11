@@ -242,27 +242,12 @@ fun toPointArray(points: Array<out Point>?): Array<Point> {
     return points?.toList()?.toTypedArray() ?: arrayOf()
 }
 
-fun RocketBoundingBox.rotateAroundCenter(
-    degrees: Float,
-    bitmapWidth: Int,
-    bitmapHeight: Int
-): RocketBoundingBox {
-    val centerX = bitmapWidth / 2f
-    val centerY = bitmapHeight / 2f
 
-    val matrix = Matrix()
-    matrix.setRotate(degrees, centerX, centerY)
-
-    val points = floatArrayOf(
-        topLeft.x, topLeft.y,
-        topRight.x, topRight.y,
-        bottomRight.x, bottomRight.y,
-        bottomLeft.x, bottomLeft.y
-    )
-
-    matrix.mapPoints(points)
-
-    return RocketBoundingBox(points)
+fun RocketBoundingBox.toApiString() : String = buildString {
+    append("${topLeft.x},${topLeft.y},")
+    append("${topRight.x},${topRight.y},")
+    append("${bottomRight.x},${bottomRight.y},")
+    append("${bottomLeft.x},${bottomLeft.y}")
 }
 
 fun RocketBoundingBox.isOutOfBounds(

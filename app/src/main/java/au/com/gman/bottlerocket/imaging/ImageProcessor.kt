@@ -35,17 +35,17 @@ class ImageProcessor @Inject constructor(
 
             Log.d(TAG, "Processing image: ${originalBitmap.width}x${originalBitmap.height}")
 
-            val processedBitmap =
+            val processedResponse =
                 imageEnhancer
                     .processImageWithMatchedTemplate(
                         originalBitmap,
                         lastBarcodeDetectionResult
                     )
 
-            if (processedBitmap != null) {
-                Log.d(TAG, "Processed: ${processedBitmap.width}x${processedBitmap.height}")
+            if (processedResponse != null) {
+                Log.d(TAG, "Processed: ${processedResponse.bitmap.width}x${processedResponse.bitmap.height}")
 
-                listener?.onProcessingSuccess(processedBitmap)
+                listener?.onProcessingSuccess(processedResponse)
             }
 
         } catch (e: Exception) {
