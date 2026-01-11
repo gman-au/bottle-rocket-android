@@ -6,8 +6,8 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-val localVersionName = "v0.0.0.local.dev"
-val localVersionCode = 1
+val localVersionName = "v0.0.9.alpha"
+val localVersionCode = 9
 
 android {
     namespace = "au.com.gman.bottlerocket"
@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
+    testImplementation("org.robolectric:robolectric:4.11.1")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

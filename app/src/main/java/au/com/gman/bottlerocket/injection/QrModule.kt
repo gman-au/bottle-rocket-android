@@ -3,7 +3,7 @@ import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IQrPositionalValidator
-import au.com.gman.bottlerocket.qrCode.EdgeDetector
+import au.com.gman.bottlerocket.qrCode.QrEdgeDetector
 import au.com.gman.bottlerocket.qrCode.QrCodeHandler
 import au.com.gman.bottlerocket.qrCode.QrCodeTemplateMatcher
 import au.com.gman.bottlerocket.qrCode.QrPositionalValidator
@@ -19,7 +19,6 @@ abstract class QrModule {
     @Binds
     abstract fun bindQrCodeHandler(
         qrCodeHandler: QrCodeHandler
-//        qrCodeHandler: QrCodeHandlerSimple
     ) : IQrCodeHandler
 
     @Binds
@@ -33,7 +32,7 @@ abstract class QrModule {
     ) : IQrPositionalValidator
 
     @Binds
-    abstract fun bindEdgeDetector(
-        edgeDetector: EdgeDetector
+    abstract fun bindQrEdgeDetector(
+        qrEdgeDetector: QrEdgeDetector
     ) : IEdgeDetector
 }

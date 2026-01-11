@@ -244,11 +244,22 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
 
         fillBox?.let { canvas.drawPath(it.toPath(), fillColor) }
 
-        drawCenteredText(
-            canvas,
-            pageBoundingBox,
-            paintStatusText,
-            steadyFrameIndicator.getStatusMessage()
-        )
+
+        if (steadyFrameIndicator.getStatus() == CaptureStatusEnum.OUT_OF_BOUNDS) {
+            drawWrappedText(
+                canvas,
+                pageBoundingBox,
+                paintStatusText,
+                steadyFrameIndicator.getStatusMessage()
+            )
+        }
+        else {
+            drawCenteredText(
+                canvas,
+                pageBoundingBox,
+                paintStatusText,
+                steadyFrameIndicator.getStatusMessage()
+            )
+        }
     }
 }

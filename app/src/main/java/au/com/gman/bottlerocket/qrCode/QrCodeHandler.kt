@@ -93,9 +93,9 @@ class QrCodeHandler @Inject constructor(
                             .scaleUpWithOffset(scalingFactor)
 
                     // Check if QR code is out of bounds
-                    outOfBounds =
+                    /*outOfBounds =
                         qrBoundingBoxCamera
-                            .isOutOfBounds(sourceSize)
+                            .isOutOfBounds(sourceSize)*/
 
                     Log.d(TAG, "QR camera: $qrBoundingBoxCamera")
                     Log.d(TAG, "QR preview: $qrBoundingBoxPreview")
@@ -143,7 +143,9 @@ class QrCodeHandler @Inject constructor(
                             pageBoundingBoxCamera
                                 .isOutOfBounds(sourceSize)
 
+                        /*
                         outOfBounds = outOfBounds || pageOutOfBounds
+                         */
 
                         Log.d(TAG, "Page out of bounds: $pageOutOfBounds")
 
@@ -169,8 +171,9 @@ class QrCodeHandler @Inject constructor(
                                     )
                         }
                         else {
-                            codeFound = false
-                            pageBoundingBoxPreview = null
+                            matchFound = true
+                            outOfBounds = true
+                            pageBoundingBoxPreview = createFallbackSquare(targetSize)
                             previousPageBounds = null
                             rocketBoundingBoxMedianFilter.reset()
                         }
@@ -192,7 +195,7 @@ class QrCodeHandler @Inject constructor(
         return BarcodeDetectionResult(
             codeFound = codeFound,
             matchFound = matchFound,
-            outOfBounds = false, //outOfBounds,
+            outOfBounds = outOfBounds,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxCamera,
@@ -217,6 +220,20 @@ class QrCodeHandler @Inject constructor(
             top[1],      // topRight
             bottom[1],   // bottomRight
             bottom[0]    // bottomLeft
+        )
+    }
+
+    private fun createFallbackSquare(targetSize: PointF): RocketBoundingBox {
+        val centerX = targetSize.x / 2f
+        val centerY = targetSize.y / 2f
+
+        val halfSize = minOf(targetSize.x, targetSize.y) * 0.25f // 50% of viewport = 25% from center
+
+        return RocketBoundingBox(
+            topLeft = PointF(centerX - halfSize, centerY - halfSize),
+            topRight = PointF(centerX + halfSize, centerY - halfSize),
+            bottomRight = PointF(centerX + halfSize, centerY + halfSize),
+            bottomLeft = PointF(centerX - halfSize, centerY + halfSize)
         )
     }
 }
