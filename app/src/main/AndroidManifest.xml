@@ -8,8 +8,8 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
     <application
@@ -24,14 +24,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BottleRocket">
         <activity
+            android:name=".activity.SplashActivity"
+            android:theme="@style/Theme.BottleRocket"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activity.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.BottleRocket">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
         <activity
             android:name=".activity.CaptureActivity"
@@ -55,6 +59,14 @@
             android:theme="@style/Theme.BottleRocket">
             <intent-filter>
                 <action android:name="android.intent.action.SETTINGS" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activity.ServerWarningActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BottleRocket">
+            <intent-filter>
+                <action android:name="android.intent.action.SERVER_WARNING" />
             </intent-filter>
         </activity>
     </application>
