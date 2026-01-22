@@ -17,4 +17,9 @@
     <string name="user_name">User name</string>
     <string name="password">Password</string>
     <string name="bottle_rocket_logo">Bottle Rocket logo</string>
+    <string name="title_activity_splash">SplashActivity</string>
+    <string name="loading_templates">Loading templates…</string>
+    <string name="continue_to_main">Continue</string>
+    <string name="warning_server">Warning - could not connect to Bottle Rocket server. \nPlease verify your Bottle Rocket server in order to detect QR code pages.</string>
+    <string name="retry">Retry</string>
 </resources>

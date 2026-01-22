@@ -4,6 +4,7 @@ import au.com.gman.bottlerocket.contracts.ConnectionTestResponse
 import android.content.ContentResolver
 import android.net.Uri
 import android.util.Log
+import au.com.gman.bottlerocket.contracts.FetchPageTemplatesResponse
 import au.com.gman.bottlerocket.contracts.ProcessCaptureResponse
 import au.com.gman.bottlerocket.domain.ApiStatusCodeEnum
 import au.com.gman.bottlerocket.interfaces.IApiResponseListener
@@ -199,6 +200,53 @@ class ApiService @Inject constructor(
                     val errorResponse = ProcessCaptureResponse(
                         errorCode = ApiStatusCodeEnum.UNKNOWN_ERROR.ordinal,
                         errorMessage = "Exception: ${e.message}"
+                    )
+                    Log.e(
+                        TAG,
+                        "APIService error: ${e.message}"
+                    )
+                    listener?.onApiResponseFailure(errorResponse)
+                }
+            }
+        }
+    }
+
+    override fun downloadTemplates() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Make the API call
+                val httpResponse = retrofitApi.apiFetchPageTemplates()
+
+                // Switch to Main thread for listener callbacks
+                withContext(Dispatchers.Main) {
+                    if (httpResponse.isSuccessful && httpResponse.body() != null) {
+                        val response = httpResponse.body()!!
+
+                        if (response.isSuccess()) {
+                            listener?.onApiFetchTemplatesSuccess(response)
+                        } else {
+                            listener?.onApiResponseFailure(response)
+                        }
+                    } else {
+                        // HTTP error - create error response
+                        val errorResponse = FetchPageTemplatesResponse(
+                            errorCode = httpResponse.code(),
+                            errorMessage = "HTTP Error: ${httpResponse.code()} - ${httpResponse.message()}",
+                            templates = emptyList()
+                        )
+                        Log.e(
+                            TAG,
+                            "APIService HTTP error: ${httpResponse.code()} - ${httpResponse.message()}"
+                        )
+                        listener?.onApiResponseFailure(errorResponse)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    val errorResponse = FetchPageTemplatesResponse(
+                        errorCode = ApiStatusCodeEnum.UNKNOWN_ERROR.ordinal,
+                        errorMessage = "Exception: ${e.message}",
+                        templates = emptyList()
                     )
                     Log.e(
                         TAG,
