@@ -5,7 +5,7 @@ import au.com.gman.bottlerocket.scanning.RocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.scanning.ScreenDimensions
 import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
 import au.com.gman.bottlerocket.scanning.ViewportRescaler
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
+import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
@@ -23,7 +23,7 @@ abstract class ScanningModule {
     @Binds
     abstract fun bindBarCodeDetector(
         barcodeDetector: BarcodeDetector
-    ): IBarcodeDetector
+    ): ICaptureArtifactDetector
 
     @Singleton
     @Binds

@@ -32,8 +32,8 @@ import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.extensions.toApiString
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
+import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
+import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.IFileSaveListener
 import au.com.gman.bottlerocket.interfaces.IFileIo
 import au.com.gman.bottlerocket.interfaces.IImageProcessingListener
@@ -53,7 +53,7 @@ import javax.inject.Inject
 class CaptureActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var barcodeDetector: IBarcodeDetector
+    lateinit var barcodeDetector: ICaptureArtifactDetector
 
     @Inject
     lateinit var imageProcessor: IImageProcessor
@@ -105,7 +105,7 @@ class CaptureActivity : AppCompatActivity() {
         steadyFrameIndicator.setProcessing(false)
 
         barcodeDetector
-            .setListener(object : IBarcodeDetectionListener {
+            .setListener(object : ICaptureDetectionListener {
                 override fun onDetectionSuccess(captureDetectionResult: CaptureDetectionResult) {
                     runOnUiThread {
 
