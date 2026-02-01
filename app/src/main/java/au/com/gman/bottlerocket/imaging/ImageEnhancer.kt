@@ -3,7 +3,7 @@ package au.com.gman.bottlerocket.imaging
 import android.graphics.Bitmap
 import android.graphics.PointF
 import android.util.Log
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.cropToPageBounds
@@ -22,7 +22,7 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
 
     override fun processImageWithMatchedTemplate(
         bitmap: Bitmap,
-        detectionResult: BarcodeDetectionResult
+        detectionResult: CaptureDetectionResult
     ): ImageEnhancementResponse? {
 
         if (!detectionResult.matchFound ||

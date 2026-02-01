@@ -2,7 +2,7 @@ package au.com.gman.bottlerocket.imaging
 
 import android.graphics.BitmapFactory
 import android.util.Log
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.interfaces.IImageEnhancer
 import au.com.gman.bottlerocket.interfaces.IImageProcessingListener
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
@@ -23,7 +23,7 @@ class ImageProcessor @Inject constructor(
         this.listener = listener
     }
 
-    override fun processImage(imageFile: File, lastBarcodeDetectionResult: BarcodeDetectionResult) {
+    override fun processImage(imageFile: File, lastCaptureDetectionResult: CaptureDetectionResult) {
         try {
 
             val originalBitmap =
@@ -39,7 +39,7 @@ class ImageProcessor @Inject constructor(
                 imageEnhancer
                     .processImageWithMatchedTemplate(
                         originalBitmap,
-                        lastBarcodeDetectionResult
+                        lastCaptureDetectionResult
                     )
 
             if (processedResponse != null) {

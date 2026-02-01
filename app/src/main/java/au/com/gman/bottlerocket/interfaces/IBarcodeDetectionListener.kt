@@ -1,7 +1,7 @@
 package au.com.gman.bottlerocket.interfaces
 
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 
 interface IBarcodeDetectionListener {
-    fun onDetectionSuccess(barcodeDetectionResult: BarcodeDetectionResult)
+    fun onDetectionSuccess(captureDetectionResult: CaptureDetectionResult)
 }

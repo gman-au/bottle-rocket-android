@@ -1,6 +1,6 @@
 package au.com.gman.bottlerocket.domain
 
-data class BarcodeDetectionResult(
+data class CaptureDetectionResult(
     val codeFound: Boolean,
     val matchFound: Boolean,
     val outOfBounds: Boolean,

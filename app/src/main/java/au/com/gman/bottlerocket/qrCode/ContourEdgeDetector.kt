@@ -9,7 +9,7 @@ import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
 
-class QrEdgeDetector @Inject constructor() : IEdgeDetector {
+class ContourEdgeDetector @Inject constructor() : IEdgeDetector {
     override fun detectEdges(src: Mat): List<Point>? {
 
         // Convert to grayscale

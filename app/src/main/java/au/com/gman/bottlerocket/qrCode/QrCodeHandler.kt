@@ -2,11 +2,10 @@ package au.com.gman.bottlerocket.qrCode
 
 import android.graphics.PointF
 import android.util.Log
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
-import au.com.gman.bottlerocket.extensions.isOutOfBounds
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
@@ -37,7 +36,7 @@ class QrCodeHandler @Inject constructor(
         mat: Mat,
         sourceWidth: Int,
         sourceHeight: Int
-    ): BarcodeDetectionResult {
+    ): CaptureDetectionResult {
         var codeFound = true
         var matchFound = false
         var outOfBounds = false
@@ -80,10 +79,6 @@ class QrCodeHandler @Inject constructor(
                     screenDimensions
                         .getTargetSize()!!
 
-                val sourceSize =
-                    screenDimensions
-                        .getSourceSize()!!
-
                 // Get QR code bounding box in camera space
                 qrCornerPoints.let { points ->
                     qrBoundingBoxCamera = RocketBoundingBox(points)
@@ -91,11 +86,6 @@ class QrCodeHandler @Inject constructor(
                     qrBoundingBoxPreview =
                         qrBoundingBoxCamera
                             .scaleUpWithOffset(scalingFactor)
-
-                    // Check if QR code is out of bounds
-                    /*outOfBounds =
-                        qrBoundingBoxCamera
-                            .isOutOfBounds(sourceSize)*/
 
                     Log.d(TAG, "QR camera: $qrBoundingBoxCamera")
                     Log.d(TAG, "QR preview: $qrBoundingBoxPreview")
@@ -137,17 +127,6 @@ class QrCodeHandler @Inject constructor(
 
                         Log.d(TAG, "Page camera: $pageBoundingBoxCamera")
                         Log.d(TAG, "Page preview: $pageBoundingBoxPreview")
-
-                        // VALIDATION 1: Check if page bounding box is out of bounds
-                        val pageOutOfBounds =
-                            pageBoundingBoxCamera
-                                .isOutOfBounds(sourceSize)
-
-                        /*
-                        outOfBounds = outOfBounds || pageOutOfBounds
-                         */
-
-                        Log.d(TAG, "Page out of bounds: $pageOutOfBounds")
 
                         previousPageBounds = pageBoundingBoxPreview
 
@@ -192,7 +171,7 @@ class QrCodeHandler @Inject constructor(
             rocketBoundingBoxMedianFilter.reset()
         }
 
-        return BarcodeDetectionResult(
+        return CaptureDetectionResult(
             codeFound = codeFound,
             matchFound = matchFound,
             outOfBounds = outOfBounds,

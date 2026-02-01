@@ -6,7 +6,7 @@ import au.com.gman.bottlerocket.interfaces.IQrPositionalValidator
 import au.com.gman.bottlerocket.interfaces.IQrTemplateCache
 import au.com.gman.bottlerocket.qrCode.QrCodeTemplateMatcher
 import au.com.gman.bottlerocket.qrCode.QrCodeHandler
-import au.com.gman.bottlerocket.qrCode.QrEdgeDetector
+import au.com.gman.bottlerocket.qrCode.ContourEdgeDetector
 import au.com.gman.bottlerocket.qrCode.QrPositionalValidator
 import au.com.gman.bottlerocket.qrCode.QrTemplateCache
 import dagger.Binds
@@ -37,7 +37,7 @@ abstract class QrModule {
 
     @Binds
     abstract fun bindQrEdgeDetector(
-        qrEdgeDetector: QrEdgeDetector
+        contourEdgeDetector: ContourEdgeDetector
     ) : IEdgeDetector
 
     @Singleton
