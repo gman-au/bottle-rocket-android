@@ -3,6 +3,8 @@ package au.com.gman.bottlerocket.qrCode
 import android.graphics.PointF
 import android.util.Log
 import au.com.gman.bottlerocket.domain.CaptureDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureStatusEnum
+import au.com.gman.bottlerocket.domain.IndicatorBox
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
@@ -54,7 +56,8 @@ class QrCodeHandler @Inject constructor(
         val pageTemplate = qrCodeTemplateMatcher.tryMatch(barcode?.rawValue ?: "")
 
         val qrBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
-        val qrBoundingPreviewBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
+        val qrIndicatorBoxes: MutableList<RocketBoundingBox?> = mutableListOf()
+        var qrIndicatorStatus: CaptureStatusEnum = CaptureStatusEnum.NOT_FOUND
 
         if (!screenDimensions.isInitialised())
             throw IllegalStateException("Screen dimensions not initialised")
@@ -106,9 +109,11 @@ class QrCodeHandler @Inject constructor(
                         .scaleUpWithOffset(scalingFactor)
 
                 qrBoundingBoxList.add(qrBoundingBoxCamera)
-                qrBoundingPreviewBoxList.add(qrBoundingBoxPreview)
+                qrIndicatorBoxes.add(qrBoundingBoxPreview)
 
                 if (pageTemplate != null) {
+
+                    qrIndicatorStatus = CaptureStatusEnum.CAPTURING
 
                     // openCV edge detection
                     val detectedEdges =
@@ -188,7 +193,9 @@ class QrCodeHandler @Inject constructor(
             pageOverlayPath = pageBoundingBoxCamera,
             feedbackOverlayPaths = qrBoundingBoxList,
             pageOverlayPathPreview = pageBoundingBoxPreview,
-            feedbackOverlayPathsPreview = qrBoundingPreviewBoxList,
+            indicatorBoxesPreview = qrIndicatorBoxes.map {
+                IndicatorBox(qrIndicatorStatus, it)
+            },
             cameraRotation = cameraRotation,
             boundingBoxRotation = 0F,
             scalingFactor = scalingFactor,

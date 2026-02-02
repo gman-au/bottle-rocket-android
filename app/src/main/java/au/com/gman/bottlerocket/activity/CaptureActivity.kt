@@ -136,7 +136,7 @@ class CaptureActivity : AppCompatActivity() {
                         lastCaptureDetectionResult = captureDetectionResult
 
                         overlayView.setPageOverlayBox(captureDetectionResult.pageOverlayPathPreview)
-                        overlayView.setFeedbackOverlayPaths(captureDetectionResult.feedbackOverlayPathsPreview)
+                        overlayView.setIndicatorBoxes(captureDetectionResult.indicatorBoxesPreview)
                     }
                 }
             })

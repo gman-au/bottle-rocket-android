@@ -1,6 +1,5 @@
 package au.com.gman.bottlerocket.injection
 
-import au.com.gman.bottlerocket.scanning.BarcodeDetector
 import au.com.gman.bottlerocket.scanning.RocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.scanning.ScreenDimensions
 import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
@@ -23,8 +22,8 @@ abstract class ScanningModule {
 
     @Binds
     abstract fun bindBarCodeDetector(
-        barcodeDetector: BarcodeDetector
-//        cornerPointDetector: CornerPointDetector
+//        barcodeDetector: BarcodeDetector
+        cornerPointDetector: CornerPointDetector
     ): ICaptureArtifactDetector
 
     @Singleton

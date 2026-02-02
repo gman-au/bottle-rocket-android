@@ -4,14 +4,14 @@ import android.graphics.PointF
 import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
-import androidx.core.graphics.toPoint
 import au.com.gman.bottlerocket.domain.CaptureDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureStatusEnum
+import au.com.gman.bottlerocket.domain.IndicatorBox
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.extensions.createFallbackSquare
 import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.extensions.toMat
-import au.com.gman.bottlerocket.injection.TheContourPointDetector
 import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
@@ -23,8 +23,7 @@ import org.opencv.core.Rect
 import javax.inject.Inject
 
 class CornerPointDetector @Inject constructor(
-//    @TheArtifactPointDetector private val edgeDetector: IEdgeDetector,
-    @TheContourPointDetector private val edgeDetector: IEdgeDetector,
+    private val edgeDetector: IEdgeDetector,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val screenDimensions: IScreenDimensions
 ) : ICaptureArtifactDetector {
@@ -47,9 +46,10 @@ class CornerPointDetector @Inject constructor(
 
         var quandrantBoxCameraPreview: RocketBoundingBox? = null
         var quadrantBoxCamera: RocketBoundingBox? = null
+        var outOfBounds = false
 
         val cornerBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
-        val cornerBoundingPreviewBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
+        val cornerIndicatorBoxes: MutableList<IndicatorBox?> = mutableListOf()
 
         val mediaImage =
             imageProxy
@@ -125,14 +125,7 @@ class CornerPointDetector @Inject constructor(
 
                 cornerRegions.forEachIndexed { index, region ->
 
-                    // add to feedback
-                    cornerBoundingBoxList.add(RocketBoundingBox(region))
-                    cornerBoundingPreviewBoxList.add(
-                        RocketBoundingBox(region).scaleUpWithOffset(
-                            scalingFactor
-                        )
-                    )
-
+                    var indicatorStatus = CaptureStatusEnum.NOT_FOUND
                     val subMat = mat.submat(region).clone()
                     val marker = edgeDetector.detectEdges(subMat, 4)
                     if (marker?.size == 4) {
@@ -147,7 +140,9 @@ class CornerPointDetector @Inject constructor(
                         // Preview space (scaled for display)
                         quandrantBoxCameraPreview =
                             quadrantBoxCamera
-                                //.scaleUpWithOffset(scalingFactor)
+                        //.scaleUpWithOffset(scalingFactor)
+
+                        indicatorStatus = CaptureStatusEnum.CAPTURING
 
                         detectedMarkers.add(
                             Point(
@@ -156,6 +151,18 @@ class CornerPointDetector @Inject constructor(
                             )
                         )
                     }
+
+                    // add to feedback
+                    cornerBoundingBoxList.add(RocketBoundingBox(region))
+                    cornerIndicatorBoxes.add(
+                        IndicatorBox(
+                            indicatorStatus,
+                            RocketBoundingBox(region).scaleUpWithOffset(
+                                scalingFactor
+                            )
+                        )
+                    )
+
                     subMat.release()
                 }
 
@@ -208,6 +215,7 @@ class CornerPointDetector @Inject constructor(
                             maxJumpThreshold = 50f
                         )*/
                 } else {
+                    outOfBounds = true
                     quandrantBoxCameraPreview = targetSize.createFallbackSquare()
                 }
             }
@@ -215,13 +223,13 @@ class CornerPointDetector @Inject constructor(
             val barcodeDetectionResult = CaptureDetectionResult(
                 codeFound = true, //codeFound,
                 matchFound = matchFound, //matchFound,
-                outOfBounds = false, //outOfBounds,
+                outOfBounds = outOfBounds,
                 qrCode = null, //qrCodeValue,
                 pageTemplate = null, //pageTemplate,
                 pageOverlayPath = quadrantBoxCamera,
                 feedbackOverlayPaths = cornerBoundingBoxList, //qrBoundingBoxCamera,
                 pageOverlayPathPreview = quandrantBoxCameraPreview,
-                feedbackOverlayPathsPreview = cornerBoundingPreviewBoxList, //qrBoundingBoxPreview,
+                indicatorBoxesPreview = cornerIndicatorBoxes, //qrBoundingBoxPreview,
                 cameraRotation = cameraRotation,
                 boundingBoxRotation = 0F,
                 scalingFactor = scalingFactor,

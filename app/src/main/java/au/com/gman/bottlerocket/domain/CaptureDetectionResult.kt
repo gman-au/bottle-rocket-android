@@ -9,7 +9,7 @@ data class CaptureDetectionResult(
     val pageOverlayPath: RocketBoundingBox?,
     val feedbackOverlayPaths: List<RocketBoundingBox?>,
     val pageOverlayPathPreview: RocketBoundingBox?,
-    val feedbackOverlayPathsPreview: List<RocketBoundingBox?>,
+    val indicatorBoxesPreview: List<IndicatorBox?>,
     val cameraRotation: Float,
     val boundingBoxRotation: Float,
     val scalingFactor: ScaleAndOffset?,
