@@ -24,7 +24,6 @@ abstract class QrModule {
 
     @Binds
     abstract fun bindQrCodeTemplateMatcher(
-//        templateMapper: QrCodeTemplateMatcher
         templateMapper: QrCodeTemplateMatcher
     ) : IQrCodeTemplateMatcher
 

@@ -23,8 +23,8 @@ abstract class ScanningModule {
 
     @Binds
     abstract fun bindBarCodeDetector(
-//        barcodeDetector: BarcodeDetector
-        cornerPointDetector: CornerPointDetector
+        barcodeDetector: BarcodeDetector
+//        cornerPointDetector: CornerPointDetector
     ): ICaptureArtifactDetector
 
     @Singleton

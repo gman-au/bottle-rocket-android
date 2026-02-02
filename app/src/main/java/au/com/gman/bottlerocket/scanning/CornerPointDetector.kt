@@ -4,14 +4,13 @@ import android.graphics.PointF
 import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
+import androidx.core.graphics.toPoint
 import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
-import au.com.gman.bottlerocket.extensions.aggressiveSmooth
 import au.com.gman.bottlerocket.extensions.createFallbackSquare
 import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.extensions.toMat
-import au.com.gman.bottlerocket.injection.TheArtifactPointDetector
 import au.com.gman.bottlerocket.injection.TheContourPointDetector
 import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
@@ -19,6 +18,8 @@ import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import com.google.mlkit.vision.common.InputImage
+import org.opencv.core.Point
+import org.opencv.core.Rect
 import javax.inject.Inject
 
 class CornerPointDetector @Inject constructor(
@@ -29,6 +30,7 @@ class CornerPointDetector @Inject constructor(
 ) : ICaptureArtifactDetector {
 
     companion object {
+        private const val CORNER_BOX_RATIO = 0.3
         private const val TAG = "CornerPointDetector"
     }
 
@@ -43,8 +45,11 @@ class CornerPointDetector @Inject constructor(
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
 
-        var pageBoundingBoxPreview: RocketBoundingBox? = null
-        var pageBoundingBoxCamera: RocketBoundingBox? = null
+        var quandrantBoxCameraPreview: RocketBoundingBox? = null
+        var quadrantBoxCamera: RocketBoundingBox? = null
+
+        val cornerBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
+        val cornerBoundingPreviewBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
 
         val mediaImage =
             imageProxy
@@ -67,26 +72,26 @@ class CornerPointDetector @Inject constructor(
             Log.d(TAG, "ImageProxy dimensions: ${imageProxy.width}x${imageProxy.height}")
             Log.d(TAG, "Rotation degrees: $rotationDegrees")
 
-            val imageWidth =
-                imageProxy
-                    .width
-
-            val imageHeight =
-                imageProxy
-                    .height
-
-            screenDimensions
-                .setSourceSize(
-                    PointF(
-                        imageWidth.toFloat(),
-                        imageHeight.toFloat()
-                    )
-                )
-
             screenDimensions
                 .setScreenRotation(rotationDegrees)
 
             val mat = imageProxy.toMat(image, rotationDegrees)!!
+
+            val imageWidth =
+                mat
+                    .width()
+
+            val imageHeight =
+                mat
+                    .height()
+
+            screenDimensions
+                .setSourceSize(
+                    PointF(
+                        imageProxy.width.toFloat(),
+                        imageProxy.height.toFloat()
+                    )
+                )
 
             if (!screenDimensions.isInitialised())
                 throw IllegalStateException("Screen dimensions not initialised")
@@ -102,63 +107,109 @@ class CornerPointDetector @Inject constructor(
                 screenDimensions
                     .getScreenRotation()
 
-            val detectedEdges =
-                edgeDetector
-                    .detectEdges(mat, 7)
+            val boxWidth = (image.width * CORNER_BOX_RATIO).toInt()
+            val boxHeight = (image.height * CORNER_BOX_RATIO).toInt()
 
-            val targetSize =
-                screenDimensions
-                    .getTargetSize()!!
+            val cornerRegions = listOf(
+                Rect(0, 0, boxWidth, boxHeight),
+                Rect(imageWidth - boxWidth, 0, boxWidth, boxHeight),
+                Rect(0, imageHeight - boxHeight, boxWidth, boxHeight),
+                Rect(imageWidth - boxWidth, imageHeight - boxHeight, boxWidth, boxHeight)
+            )
 
             var matchFound = false
 
-            if (detectedEdges?.size == 7) {
-                matchFound = true
+            if (scalingFactor != null) {
 
-                Log.d(TAG, "Raw detected edges from Mat:")
-                detectedEdges.forEachIndexed { i, pt ->
-                    Log.d(TAG, "  Corner $i: (${pt.x}, ${pt.y})")
+                val detectedMarkers = mutableListOf<Point?>()
+
+                cornerRegions.forEachIndexed { index, region ->
+
+                    // add to feedback
+                    cornerBoundingBoxList.add(RocketBoundingBox(region))
+                    cornerBoundingPreviewBoxList.add(
+                        RocketBoundingBox(region).scaleUpWithOffset(
+                            scalingFactor
+                        )
+                    )
+
+                    val subMat = mat.submat(region).clone()
+                    val marker = edgeDetector.detectEdges(subMat, 4)
+                    if (marker?.size == 4) {
+                        // should be the center of the 4
+                        val orderedPoints = (
+                                marker.map { PointF(it.x.toFloat(), it.y.toFloat()) }
+                                ).orderPointsClockwise()
+
+                        // Camera space (Mat coordinates)
+                        quadrantBoxCamera = RocketBoundingBox(orderedPoints)
+
+                        // Preview space (scaled for display)
+                        quandrantBoxCameraPreview =
+                            quadrantBoxCamera
+                                //.scaleUpWithOffset(scalingFactor)
+
+                        detectedMarkers.add(
+                            Point(
+                                quandrantBoxCameraPreview.topLeft.x.toDouble(),
+                                quandrantBoxCameraPreview.topLeft.y.toDouble()
+                            )
+                        )
+                    }
+                    subMat.release()
                 }
 
-                val orderedPoints = (
-                        detectedEdges.map { PointF(it.x.toFloat(), it.y.toFloat()) }
-                        ).orderPointsClockwise()
+                val targetSize =
+                    screenDimensions
+                        .getTargetSize()!!
 
-                Log.d(TAG, "After orderPointsClockwise:")
-                orderedPoints.forEachIndexed { i, pt ->
-                    Log.d(TAG, "  Corner $i: (${pt.x}, ${pt.y})")
-                }
+                if (detectedMarkers.size == 4) {
+                    matchFound = true
 
-                // Camera space (Mat coordinates)
-                pageBoundingBoxCamera = RocketBoundingBox(orderedPoints)
+                    Log.d(TAG, "Raw detected edges from Mat:")
+                    detectedMarkers.forEachIndexed { i, pt ->
+                        Log.d(TAG, "  Corner $i: (${pt!!.x}, ${pt.y})")
+                    }
 
-                Log.d(TAG, "Camera bounding box: $pageBoundingBoxCamera")
+                    val orderedPoints = (
+                            detectedMarkers.map { PointF(it!!.x.toFloat(), it.y.toFloat()) }
+                            ).orderPointsClockwise()
 
-                // Preview space (scaled for display)
-                pageBoundingBoxPreview =
-                    pageBoundingBoxCamera
-                        .scaleUpWithOffset(scalingFactor!!)
+                    Log.d(TAG, "After orderPointsClockwise:")
+                    orderedPoints.forEachIndexed { i, pt ->
+                        Log.d(TAG, "  Corner $i: (${pt.x}, ${pt.y})")
+                    }
 
-                pageBoundingBoxPreview =
-                    rocketBoundingBoxMedianFilter
-                        .add(pageBoundingBoxPreview)
+                    // Camera space (Mat coordinates)
+                    quadrantBoxCamera = RocketBoundingBox(orderedPoints)
 
-                Log.d(TAG, "Page camera: $pageBoundingBoxCamera")
-                Log.d(TAG, "Page preview: $pageBoundingBoxPreview")
+                    Log.d(TAG, "Camera bounding box: $quadrantBoxCamera")
 
-                previousPageBounds = pageBoundingBoxPreview
+                    // Preview space (scaled for display)
+                    quandrantBoxCameraPreview =
+                        quadrantBoxCamera
+                            .scaleUpWithOffset(scalingFactor)
 
-                // Apply smoothing to the SCALED version (for preview)
-                /*pageBoundingBoxPreview =
+                    quandrantBoxCameraPreview =
+                        rocketBoundingBoxMedianFilter
+                            .add(quandrantBoxCameraPreview)
+
+                    Log.d(TAG, "Page camera: $quadrantBoxCamera")
+                    Log.d(TAG, "Page preview: $quandrantBoxCameraPreview")
+
+                    previousPageBounds = quandrantBoxCameraPreview
+
+                    // Apply smoothing to the SCALED version (for preview)
+                    /*pageBoundingBoxPreview =
                     pageBoundingBoxPreview
                         .aggressiveSmooth(
                             previous = previousPageBounds,
                             smoothFactor = 0.3f,
                             maxJumpThreshold = 50f
                         )*/
-            }
-            else {
-                pageBoundingBoxPreview = targetSize.createFallbackSquare()
+                } else {
+                    quandrantBoxCameraPreview = targetSize.createFallbackSquare()
+                }
             }
 
             val barcodeDetectionResult = CaptureDetectionResult(
@@ -167,10 +218,10 @@ class CornerPointDetector @Inject constructor(
                 outOfBounds = false, //outOfBounds,
                 qrCode = null, //qrCodeValue,
                 pageTemplate = null, //pageTemplate,
-                pageOverlayPath = pageBoundingBoxCamera,
-                qrCodeOverlayPath = null, //qrBoundingBoxCamera,
-                pageOverlayPathPreview = pageBoundingBoxPreview,
-                qrCodeOverlayPathPreview = null, //qrBoundingBoxPreview,
+                pageOverlayPath = quadrantBoxCamera,
+                feedbackOverlayPaths = cornerBoundingBoxList, //qrBoundingBoxCamera,
+                pageOverlayPathPreview = quandrantBoxCameraPreview,
+                feedbackOverlayPathsPreview = cornerBoundingPreviewBoxList, //qrBoundingBoxPreview,
                 cameraRotation = cameraRotation,
                 boundingBoxRotation = 0F,
                 scalingFactor = scalingFactor,

@@ -2,10 +2,14 @@ package au.com.gman.bottlerocket.domain
 
 import android.graphics.Point
 import android.graphics.PointF
-import android.graphics.Rect
+
+
 import android.graphics.RectF
 import androidx.core.graphics.toPointF
 import au.com.gman.bottlerocket.extensions.toPointArray
+import android.graphics.Rect
+import org.opencv.core.Rect as cvRect
+
 
 data class RocketBoundingBox(
     val topLeft: PointF,
@@ -44,6 +48,13 @@ data class RocketBoundingBox(
         PointF(rect.right, rect.top),
         PointF(rect.right, rect.bottom),
         PointF(rect.left, rect.bottom)
+    )
+
+    constructor(rect: cvRect) : this(
+        PointF(rect.tl().x.toFloat(), rect.tl().y.toFloat()),
+        PointF(rect.br().x.toFloat(), rect.tl().y.toFloat()),
+        PointF(rect.br().x.toFloat(), rect.br().y.toFloat()),
+        PointF(rect.tl().x.toFloat(), rect.br().y.toFloat()),
     )
 
     constructor(floats: FloatArray) : this(

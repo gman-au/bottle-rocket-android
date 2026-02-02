@@ -23,9 +23,10 @@ object EdgeDetectionModule {
     @Provides
     @TheArtifactPointDetector
     fun provideTheArtifactPointDetector(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        edgeDetector: ContourPointDetector
     ): IEdgeDetector {
-        return ScribzeeMarkerDetector()
+        return ScribzeeMarkerDetector(edgeDetector)
     }
 
 }

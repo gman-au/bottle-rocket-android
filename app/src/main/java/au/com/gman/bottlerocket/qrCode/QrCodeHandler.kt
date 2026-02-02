@@ -53,6 +53,9 @@ class QrCodeHandler @Inject constructor(
 
         val pageTemplate = qrCodeTemplateMatcher.tryMatch(barcode?.rawValue ?: "")
 
+        val qrBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
+        val qrBoundingPreviewBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
+
         if (!screenDimensions.isInitialised())
             throw IllegalStateException("Screen dimensions not initialised")
 
@@ -101,6 +104,9 @@ class QrCodeHandler @Inject constructor(
                 qrBoundingBoxPreview =
                     qrBoundingBoxCamera!!
                         .scaleUpWithOffset(scalingFactor)
+
+                qrBoundingBoxList.add(qrBoundingBoxCamera)
+                qrBoundingPreviewBoxList.add(qrBoundingBoxPreview)
 
                 if (pageTemplate != null) {
 
@@ -180,27 +186,14 @@ class QrCodeHandler @Inject constructor(
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxCamera,
-            qrCodeOverlayPath = qrBoundingBoxCamera,
+            feedbackOverlayPaths = qrBoundingBoxList,
             pageOverlayPathPreview = pageBoundingBoxPreview,
-            qrCodeOverlayPathPreview = qrBoundingBoxPreview,
+            feedbackOverlayPathsPreview = qrBoundingPreviewBoxList,
             cameraRotation = cameraRotation,
             boundingBoxRotation = 0F,
             scalingFactor = scalingFactor,
             sourceImageWidth = sourceWidth,
             sourceImageHeight = sourceHeight
-        )
-    }
-
-    private fun orderPointsClockwise(points: List<PointF>): Array<PointF> {
-        val sorted = points.sortedBy { it.y }
-        val top = sorted.take(2).sortedBy { it.x }
-        val bottom = sorted.takeLast(2).sortedBy { it.x }
-
-        return arrayOf(
-            top[0],      // topLeft
-            top[1],      // topRight
-            bottom[1],   // bottomRight
-            bottom[0]    // bottomLeft
         )
     }
 }

@@ -136,7 +136,7 @@ class CaptureActivity : AppCompatActivity() {
                         lastCaptureDetectionResult = captureDetectionResult
 
                         overlayView.setPageOverlayBox(captureDetectionResult.pageOverlayPathPreview)
-                        overlayView.setQrOverlayPath(captureDetectionResult.qrCodeOverlayPathPreview)
+                        overlayView.setFeedbackOverlayPaths(captureDetectionResult.feedbackOverlayPathsPreview)
                     }
                 }
             })
@@ -282,7 +282,7 @@ class CaptureActivity : AppCompatActivity() {
                             )
 
                     // enable this for flash
-                    camera.cameraControl.enableTorch(true)
+//                    camera.cameraControl.enableTorch(true)
 
                     val camera2Control =
                         Camera2CameraControl

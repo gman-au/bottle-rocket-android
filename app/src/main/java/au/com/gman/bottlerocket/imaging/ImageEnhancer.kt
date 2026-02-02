@@ -67,6 +67,11 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
                 PointF(0F, 0F)
             )
 
+        val qrOverlay =
+            detectionResult
+                .feedbackOverlayPaths
+                .first()
+
         // Scale the overlay from ImageAnalysis coordinates to bitmap coordinates
         val scaledPageOverlay =
             detectionResult
@@ -75,13 +80,12 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
 
         // Scale the QR overlay the same way
         val scaledQrOverlay =
-            detectionResult
-                .qrCodeOverlayPath
+            qrOverlay
                 ?.scaleUpWithOffset(scaleFactor)
 
         Log.d(TAG, "Original overlay: ${detectionResult.pageOverlayPath}")
         Log.d(TAG, "Scaled overlay: $scaledPageOverlay")
-        Log.d(TAG, "Original QR overlay: ${detectionResult.qrCodeOverlayPath}")
+        Log.d(TAG, "Original QR overlay: ${detectionResult.feedbackOverlayPaths}")
         Log.d(TAG, "Scaled QR overlay: $scaledQrOverlay")
 
         val enhancedBitmap =

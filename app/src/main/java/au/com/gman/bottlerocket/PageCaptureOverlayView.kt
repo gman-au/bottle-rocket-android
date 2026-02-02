@@ -107,7 +107,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             }
 
     private var pageBoundingBox: RocketBoundingBox? = null
-    private var qrCodeBoundingBox: RocketBoundingBox? = null
+    private var feedbackBoundingBoxes: List<RocketBoundingBox?> = emptyList()
 
     private var unmatchedQrCode: String? = null
 
@@ -117,8 +117,8 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
         postInvalidate()
     }
 
-    fun setQrOverlayPath(box: RocketBoundingBox?) {
-        qrCodeBoundingBox = box
+    fun setFeedbackOverlayPaths(boxes: List<RocketBoundingBox?>) {
+        feedbackBoundingBoxes = boxes
         // Invalidate the view to trigger a redraw
         postInvalidate()
     }
@@ -221,16 +221,18 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
 
         pageBoundingBox?.let { canvas.drawPath(it.toPath(), borderColor) }
         pageBoundingBox?.let { canvas.drawPath(it.toPath(), fillColor) }
-        qrCodeBoundingBox?.let { it ->
-            canvas.drawPath(it.toPath(), borderColor)
-            unmatchedQrCode?.let {
-                val unmatchedStatusWithCode = "Unmatched QR Code:\r\n\r\n${it}"
-                drawWrappedText(
-                    canvas,
-                    qrCodeBoundingBox,
-                    paintStatusUnmatchedCode,
-                    unmatchedStatusWithCode
-                )
+        feedbackBoundingBoxes.forEachIndexed { index, it ->
+            if (it != null) {
+                canvas.drawPath(it.toPath(), borderColor)
+                unmatchedQrCode?.let {
+                    val unmatchedStatusWithCode = "Unmatched QR Code:\r\n\r\n${it}"
+                    drawWrappedText(
+                        canvas,
+                        feedbackBoundingBoxes[index],
+                        paintStatusUnmatchedCode,
+                        unmatchedStatusWithCode
+                    )
+                }
             }
         }
 
@@ -252,8 +254,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
                 paintStatusText,
                 steadyFrameIndicator.getStatusMessage()
             )
-        }
-        else {
+        } else {
             drawCenteredText(
                 canvas,
                 pageBoundingBox,
