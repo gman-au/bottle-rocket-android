@@ -44,7 +44,7 @@ class CornerPointDetector @Inject constructor(
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
 
-        var quandrantBoxCameraPreview: RocketBoundingBox? = null
+        var quadrantBoxCameraPreview: RocketBoundingBox? = null
         var quadrantBoxCamera: RocketBoundingBox? = null
         var outOfBounds = false
 
@@ -138,30 +138,38 @@ class CornerPointDetector @Inject constructor(
                         quadrantBoxCamera = RocketBoundingBox(orderedPoints)
 
                         // Preview space (scaled for display)
-                        quandrantBoxCameraPreview =
+                        quadrantBoxCameraPreview =
                             quadrantBoxCamera
-                        //.scaleUpWithOffset(scalingFactor)
+                        .scaleUpWithOffset(scalingFactor)
+
+                        // debugging
+                        cornerIndicatorBoxes.add(
+                            IndicatorBox(
+                                CaptureStatusEnum.PROCESSING,
+                                quadrantBoxCameraPreview
+                            )
+                        )
 
                         indicatorStatus = CaptureStatusEnum.CAPTURING
 
                         detectedMarkers.add(
                             Point(
-                                quandrantBoxCameraPreview.topLeft.x.toDouble(),
-                                quandrantBoxCameraPreview.topLeft.y.toDouble()
+                                quadrantBoxCameraPreview.topLeft.x.toDouble(),
+                                quadrantBoxCameraPreview.topLeft.y.toDouble()
                             )
                         )
                     }
 
                     // add to feedback
                     cornerBoundingBoxList.add(RocketBoundingBox(region))
-                    cornerIndicatorBoxes.add(
+                   /* cornerIndicatorBoxes.add(
                         IndicatorBox(
                             indicatorStatus,
                             RocketBoundingBox(region).scaleUpWithOffset(
                                 scalingFactor
                             )
                         )
-                    )
+                    )*/
 
                     subMat.release()
                 }
@@ -193,18 +201,18 @@ class CornerPointDetector @Inject constructor(
                     Log.d(TAG, "Camera bounding box: $quadrantBoxCamera")
 
                     // Preview space (scaled for display)
-                    quandrantBoxCameraPreview =
+                    quadrantBoxCameraPreview =
                         quadrantBoxCamera
                             .scaleUpWithOffset(scalingFactor)
 
-                    quandrantBoxCameraPreview =
+                    quadrantBoxCameraPreview =
                         rocketBoundingBoxMedianFilter
-                            .add(quandrantBoxCameraPreview)
+                            .add(quadrantBoxCameraPreview)
 
                     Log.d(TAG, "Page camera: $quadrantBoxCamera")
-                    Log.d(TAG, "Page preview: $quandrantBoxCameraPreview")
+                    Log.d(TAG, "Page preview: $quadrantBoxCameraPreview")
 
-                    previousPageBounds = quandrantBoxCameraPreview
+                    previousPageBounds = quadrantBoxCameraPreview
 
                     // Apply smoothing to the SCALED version (for preview)
                     /*pageBoundingBoxPreview =
@@ -216,7 +224,7 @@ class CornerPointDetector @Inject constructor(
                         )*/
                 } else {
                     outOfBounds = true
-                    quandrantBoxCameraPreview = targetSize.createFallbackSquare()
+                    quadrantBoxCameraPreview = targetSize.createFallbackSquare()
                 }
             }
 
@@ -228,7 +236,7 @@ class CornerPointDetector @Inject constructor(
                 pageTemplate = null, //pageTemplate,
                 pageOverlayPath = quadrantBoxCamera,
                 feedbackOverlayPaths = cornerBoundingBoxList, //qrBoundingBoxCamera,
-                pageOverlayPathPreview = quandrantBoxCameraPreview,
+                pageOverlayPathPreview = quadrantBoxCameraPreview,
                 indicatorBoxesPreview = cornerIndicatorBoxes, //qrBoundingBoxPreview,
                 cameraRotation = cameraRotation,
                 boundingBoxRotation = 0F,

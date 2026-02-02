@@ -11,7 +11,6 @@ import au.com.gman.bottlerocket.extensions.aggressiveSmooth
 import au.com.gman.bottlerocket.extensions.createFallbackSquare
 import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
-import au.com.gman.bottlerocket.injection.TheContourPointDetector
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
@@ -27,7 +26,7 @@ class QrCodeHandler @Inject constructor(
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val qrPositionalValidator: IQrPositionalValidator,
-    @TheContourPointDetector private val edgeDetector: IEdgeDetector
+    private val edgeDetector: IEdgeDetector
 ) : IQrCodeHandler {
 
     companion object {
