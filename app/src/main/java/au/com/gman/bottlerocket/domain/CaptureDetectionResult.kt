@@ -1,15 +1,15 @@
 package au.com.gman.bottlerocket.domain
 
-data class BarcodeDetectionResult(
+data class CaptureDetectionResult(
     val codeFound: Boolean,
     val matchFound: Boolean,
     val outOfBounds: Boolean,
     val qrCode: String?,
     val pageTemplate: PageTemplate?,
     val pageOverlayPath: RocketBoundingBox?,
-    val qrCodeOverlayPath: RocketBoundingBox?,
+    val feedbackOverlayPaths: List<RocketBoundingBox?>,
     val pageOverlayPathPreview: RocketBoundingBox?,
-    val qrCodeOverlayPathPreview: RocketBoundingBox?,
+    val indicatorBoxesPreview: List<IndicatorBox?>,
     val cameraRotation: Float,
     val boundingBoxRotation: Float,
     val scalingFactor: ScaleAndOffset?,

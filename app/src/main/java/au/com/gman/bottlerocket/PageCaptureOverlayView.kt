@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.res.ResourcesCompat
 import au.com.gman.bottlerocket.domain.CaptureStatusEnum
+import au.com.gman.bottlerocket.domain.IndicatorBox
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.extensions.fillFromBottom
 import au.com.gman.bottlerocket.extensions.toPath
@@ -107,7 +108,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             }
 
     private var pageBoundingBox: RocketBoundingBox? = null
-    private var qrCodeBoundingBox: RocketBoundingBox? = null
+    private var indicatorBoxes: List<IndicatorBox?> = emptyList()
 
     private var unmatchedQrCode: String? = null
 
@@ -117,8 +118,8 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
         postInvalidate()
     }
 
-    fun setQrOverlayPath(box: RocketBoundingBox?) {
-        qrCodeBoundingBox = box
+    fun setIndicatorBoxes(boxes: List<IndicatorBox?>) {
+        indicatorBoxes = boxes
         // Invalidate the view to trigger a redraw
         postInvalidate()
     }
@@ -203,7 +204,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             measuredFontSize = this.measuredHeight / 32.0F
         }
 
-        val borderColor = when (steadyFrameIndicator.getStatus()) {
+        val pageBorderColor = when (steadyFrameIndicator.getStatus()) {
             CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenBorder
             CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberBorder
             CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberBorder
@@ -211,7 +212,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.OUT_OF_BOUNDS -> paintCaptureStatusRedBorder
         }
 
-        val fillColor = when (steadyFrameIndicator.getStatus()) {
+        val pageFillColor = when (steadyFrameIndicator.getStatus()) {
             CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenFill
             CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberFill
             CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberFill
@@ -219,18 +220,28 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.OUT_OF_BOUNDS -> paintCaptureStatusRedFill
         }
 
-        pageBoundingBox?.let { canvas.drawPath(it.toPath(), borderColor) }
-        pageBoundingBox?.let { canvas.drawPath(it.toPath(), fillColor) }
-        qrCodeBoundingBox?.let { it ->
-            canvas.drawPath(it.toPath(), borderColor)
-            unmatchedQrCode?.let {
-                val unmatchedStatusWithCode = "Unmatched QR Code:\r\n\r\n${it}"
-                drawWrappedText(
-                    canvas,
-                    qrCodeBoundingBox,
-                    paintStatusUnmatchedCode,
-                    unmatchedStatusWithCode
-                )
+        pageBoundingBox?.let { canvas.drawPath(it.toPath(), pageBorderColor) }
+        pageBoundingBox?.let { canvas.drawPath(it.toPath(), pageFillColor) }
+
+        indicatorBoxes.forEachIndexed { index, it ->
+            if (it?.box != null) {
+                val indicatorBorderColor = when (it.status) {
+                    CaptureStatusEnum.CAPTURING -> paintCaptureStatusGreenBorder
+                    CaptureStatusEnum.HOLD_STEADY -> paintCaptureStatusAmberBorder
+                    CaptureStatusEnum.NOT_FOUND -> paintCaptureStatusAmberBorder
+                    CaptureStatusEnum.PROCESSING -> paintCaptureStatusBlueBorder
+                    CaptureStatusEnum.OUT_OF_BOUNDS -> paintCaptureStatusRedBorder
+                }
+                canvas.drawPath(it.box.toPath(), indicatorBorderColor)
+                unmatchedQrCode?.let {
+                    val unmatchedStatusWithCode = "Unmatched QR Code:\r\n\r\n${it}"
+                    drawWrappedText(
+                        canvas,
+                        indicatorBoxes[index]?.box,
+                        paintStatusUnmatchedCode,
+                        unmatchedStatusWithCode
+                    )
+                }
             }
         }
 
@@ -242,7 +253,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
             CaptureStatusEnum.OUT_OF_BOUNDS -> null
         }
 
-        fillBox?.let { canvas.drawPath(it.toPath(), fillColor) }
+        fillBox?.let { canvas.drawPath(it.toPath(), pageFillColor) }
 
 
         if (steadyFrameIndicator.getStatus() == CaptureStatusEnum.OUT_OF_BOUNDS) {
@@ -252,8 +263,7 @@ class PageCaptureOverlayView(context: Context, attrs: AttributeSet? = null) : Vi
                 paintStatusText,
                 steadyFrameIndicator.getStatusMessage()
             )
-        }
-        else {
+        } else {
             drawCenteredText(
                 canvas,
                 pageBoundingBox,

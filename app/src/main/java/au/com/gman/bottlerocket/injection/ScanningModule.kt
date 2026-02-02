@@ -1,15 +1,15 @@
 package au.com.gman.bottlerocket.injection
 
+import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
+import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
+import au.com.gman.bottlerocket.interfaces.IScreenDimensions
+import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
+import au.com.gman.bottlerocket.interfaces.IViewportRescaler
 import au.com.gman.bottlerocket.scanning.BarcodeDetector
 import au.com.gman.bottlerocket.scanning.RocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.scanning.ScreenDimensions
 import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
 import au.com.gman.bottlerocket.scanning.ViewportRescaler
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
-import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
-import au.com.gman.bottlerocket.interfaces.IScreenDimensions
-import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
-import au.com.gman.bottlerocket.interfaces.IViewportRescaler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -23,7 +23,7 @@ abstract class ScanningModule {
     @Binds
     abstract fun bindBarCodeDetector(
         barcodeDetector: BarcodeDetector
-    ): IBarcodeDetector
+    ): ICaptureArtifactDetector
 
     @Singleton
     @Binds

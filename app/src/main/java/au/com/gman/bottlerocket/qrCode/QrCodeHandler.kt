@@ -2,11 +2,14 @@ package au.com.gman.bottlerocket.qrCode
 
 import android.graphics.PointF
 import android.util.Log
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureStatusEnum
+import au.com.gman.bottlerocket.domain.IndicatorBox
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
-import au.com.gman.bottlerocket.extensions.isOutOfBounds
+import au.com.gman.bottlerocket.extensions.createFallbackSquare
+import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
@@ -37,7 +40,7 @@ class QrCodeHandler @Inject constructor(
         mat: Mat,
         sourceWidth: Int,
         sourceHeight: Int
-    ): BarcodeDetectionResult {
+    ): CaptureDetectionResult {
         var codeFound = true
         var matchFound = false
         var outOfBounds = false
@@ -50,6 +53,10 @@ class QrCodeHandler @Inject constructor(
         var scalingFactor: ScaleAndOffset? = null
 
         val pageTemplate = qrCodeTemplateMatcher.tryMatch(barcode?.rawValue ?: "")
+
+        val qrBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
+        val qrIndicatorBoxes: MutableList<RocketBoundingBox?> = mutableListOf()
+        var qrIndicatorStatus: CaptureStatusEnum = CaptureStatusEnum.NOT_FOUND
 
         if (!screenDimensions.isInitialised())
             throw IllegalStateException("Screen dimensions not initialised")
@@ -80,10 +87,6 @@ class QrCodeHandler @Inject constructor(
                     screenDimensions
                         .getTargetSize()!!
 
-                val sourceSize =
-                    screenDimensions
-                        .getSourceSize()!!
-
                 // Get QR code bounding box in camera space
                 qrCornerPoints.let { points ->
                     qrBoundingBoxCamera = RocketBoundingBox(points)
@@ -91,11 +94,6 @@ class QrCodeHandler @Inject constructor(
                     qrBoundingBoxPreview =
                         qrBoundingBoxCamera
                             .scaleUpWithOffset(scalingFactor)
-
-                    // Check if QR code is out of bounds
-                    /*outOfBounds =
-                        qrBoundingBoxCamera
-                            .isOutOfBounds(sourceSize)*/
 
                     Log.d(TAG, "QR camera: $qrBoundingBoxCamera")
                     Log.d(TAG, "QR preview: $qrBoundingBoxPreview")
@@ -109,19 +107,24 @@ class QrCodeHandler @Inject constructor(
                     qrBoundingBoxCamera!!
                         .scaleUpWithOffset(scalingFactor)
 
+                qrBoundingBoxList.add(qrBoundingBoxCamera)
+                qrIndicatorBoxes.add(qrBoundingBoxPreview)
+
                 if (pageTemplate != null) {
+
+                    qrIndicatorStatus = CaptureStatusEnum.CAPTURING
 
                     // openCV edge detection
                     val detectedEdges =
                         edgeDetector
-                            .detectEdges(mat)
+                            .detectEdges(mat, 4)
 
                     if (detectedEdges?.size == 4) {
                         Log.d(TAG, "Raw edges: $detectedEdges")
 
-                        val orderedPoints = orderPointsClockwise(
-                            detectedEdges.map { PointF(it.x.toFloat(), it.y.toFloat()) }
-                        )
+                        val orderedPoints = (
+                                detectedEdges.map { PointF(it.x.toFloat(), it.y.toFloat()) }
+                                ).orderPointsClockwise()
 
                         // Camera space (Mat coordinates)
                         pageBoundingBoxCamera = RocketBoundingBox(orderedPoints)
@@ -137,17 +140,6 @@ class QrCodeHandler @Inject constructor(
 
                         Log.d(TAG, "Page camera: $pageBoundingBoxCamera")
                         Log.d(TAG, "Page preview: $pageBoundingBoxPreview")
-
-                        // VALIDATION 1: Check if page bounding box is out of bounds
-                        val pageOutOfBounds =
-                            pageBoundingBoxCamera
-                                .isOutOfBounds(sourceSize)
-
-                        /*
-                        outOfBounds = outOfBounds || pageOutOfBounds
-                         */
-
-                        Log.d(TAG, "Page out of bounds: $pageOutOfBounds")
 
                         previousPageBounds = pageBoundingBoxPreview
 
@@ -169,11 +161,10 @@ class QrCodeHandler @Inject constructor(
                                         smoothFactor = 0.3f,
                                         maxJumpThreshold = 50f
                                     )
-                        }
-                        else {
+                        } else {
                             matchFound = true
                             outOfBounds = true
-                            pageBoundingBoxPreview = createFallbackSquare(targetSize)
+                            pageBoundingBoxPreview = targetSize.createFallbackSquare()
                             previousPageBounds = null
                             rocketBoundingBoxMedianFilter.reset()
                         }
@@ -192,48 +183,23 @@ class QrCodeHandler @Inject constructor(
             rocketBoundingBoxMedianFilter.reset()
         }
 
-        return BarcodeDetectionResult(
+        return CaptureDetectionResult(
             codeFound = codeFound,
             matchFound = matchFound,
             outOfBounds = outOfBounds,
             qrCode = qrCodeValue,
             pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxCamera,
-            qrCodeOverlayPath = qrBoundingBoxCamera,
+            feedbackOverlayPaths = qrBoundingBoxList,
             pageOverlayPathPreview = pageBoundingBoxPreview,
-            qrCodeOverlayPathPreview = qrBoundingBoxPreview,
+            indicatorBoxesPreview = qrIndicatorBoxes.map {
+                IndicatorBox(qrIndicatorStatus, it)
+            },
             cameraRotation = cameraRotation,
             boundingBoxRotation = 0F,
             scalingFactor = scalingFactor,
             sourceImageWidth = sourceWidth,
             sourceImageHeight = sourceHeight
-        )
-    }
-
-    private fun orderPointsClockwise(points: List<PointF>): Array<PointF> {
-        val sorted = points.sortedBy { it.y }
-        val top = sorted.take(2).sortedBy { it.x }
-        val bottom = sorted.takeLast(2).sortedBy { it.x }
-
-        return arrayOf(
-            top[0],      // topLeft
-            top[1],      // topRight
-            bottom[1],   // bottomRight
-            bottom[0]    // bottomLeft
-        )
-    }
-
-    private fun createFallbackSquare(targetSize: PointF): RocketBoundingBox {
-        val centerX = targetSize.x / 2f
-        val centerY = targetSize.y / 2f
-
-        val halfSize = minOf(targetSize.x, targetSize.y) * 0.25f // 50% of viewport = 25% from center
-
-        return RocketBoundingBox(
-            topLeft = PointF(centerX - halfSize, centerY - halfSize),
-            topRight = PointF(centerX + halfSize, centerY - halfSize),
-            bottomRight = PointF(centerX + halfSize, centerY + halfSize),
-            bottomLeft = PointF(centerX - halfSize, centerY + halfSize)
         )
     }
 }

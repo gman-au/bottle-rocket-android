@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
 import au.com.gman.bottlerocket.extensions.toMat
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
+import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
+import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -17,7 +17,7 @@ import javax.inject.Inject
 class BarcodeDetector @Inject constructor(
     private val qrCodeHandler: IQrCodeHandler,
     private val screenDimensions: IScreenDimensions
-) : IBarcodeDetector {
+) : ICaptureArtifactDetector {
 
     companion object {
         private const val TAG = "BarcodeDetector"
@@ -37,9 +37,9 @@ class BarcodeDetector @Inject constructor(
         BarcodeScanning
             .getClient(scannerOptions)
 
-    private var listener: IBarcodeDetectionListener? = null
+    private var listener: ICaptureDetectionListener? = null
 
-    override fun setListener(listener: IBarcodeDetectionListener) {
+    override fun setListener(listener: ICaptureDetectionListener) {
         this.listener = listener
     }
 

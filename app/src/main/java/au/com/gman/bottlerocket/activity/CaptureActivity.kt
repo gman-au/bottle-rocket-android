@@ -3,7 +3,6 @@ package au.com.gman.bottlerocket.activity
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.graphics.PointF
 import android.hardware.camera2.CaptureRequest
 import android.net.Uri
@@ -29,12 +28,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import au.com.gman.bottlerocket.PageCaptureOverlayView
 import au.com.gman.bottlerocket.R
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.extensions.toApiString
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetectionListener
-import au.com.gman.bottlerocket.interfaces.IBarcodeDetector
+import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
+import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.IFileSaveListener
 import au.com.gman.bottlerocket.interfaces.IFileIo
 import au.com.gman.bottlerocket.interfaces.IImageProcessingListener
@@ -54,7 +53,7 @@ import javax.inject.Inject
 class CaptureActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var barcodeDetector: IBarcodeDetector
+    lateinit var captureArtifactDetector: ICaptureArtifactDetector
 
     @Inject
     lateinit var imageProcessor: IImageProcessor
@@ -76,7 +75,7 @@ class CaptureActivity : AppCompatActivity() {
 
     private lateinit var cameraExecutor: ExecutorService
 
-    private lateinit var lastBarcodeDetectionResult: BarcodeDetectionResult
+    private lateinit var lastCaptureDetectionResult: CaptureDetectionResult
 
     private var lastEnhancedQrBoundingBox: RocketBoundingBox? = null
 
@@ -105,14 +104,14 @@ class CaptureActivity : AppCompatActivity() {
 
         steadyFrameIndicator.setProcessing(false)
 
-        barcodeDetector
-            .setListener(object : IBarcodeDetectionListener {
-                override fun onDetectionSuccess(barcodeDetectionResult: BarcodeDetectionResult) {
+        captureArtifactDetector
+            .setListener(object : ICaptureDetectionListener {
+                override fun onDetectionSuccess(captureDetectionResult: CaptureDetectionResult) {
                     runOnUiThread {
 
-                        codeFound = barcodeDetectionResult.codeFound
-                        matchFound = barcodeDetectionResult.matchFound
-                        outOfBounds = barcodeDetectionResult.outOfBounds
+                        codeFound = captureDetectionResult.codeFound
+                        matchFound = captureDetectionResult.matchFound
+                        outOfBounds = captureDetectionResult.outOfBounds
 
                         if (codeFound) {
                             if (outOfBounds)
@@ -127,17 +126,17 @@ class CaptureActivity : AppCompatActivity() {
                             overlayView.setUnmatchedQrCode(null)
                         } else {
                             if (codeFound) {
-                                overlayView.setUnmatchedQrCode(barcodeDetectionResult.qrCode)
+                                overlayView.setUnmatchedQrCode(captureDetectionResult.qrCode)
                             } else {
                                 overlayView.setUnmatchedQrCode(null)
                             }
                             steadyFrameIndicator.reset()
                         }
 
-                        lastBarcodeDetectionResult = barcodeDetectionResult
+                        lastCaptureDetectionResult = captureDetectionResult
 
-                        overlayView.setPageOverlayBox(barcodeDetectionResult.pageOverlayPathPreview)
-                        overlayView.setQrOverlayPath(barcodeDetectionResult.qrCodeOverlayPathPreview)
+                        overlayView.setPageOverlayBox(captureDetectionResult.pageOverlayPathPreview)
+                        overlayView.setIndicatorBoxes(captureDetectionResult.indicatorBoxesPreview)
                     }
                 }
             })
@@ -186,7 +185,7 @@ class CaptureActivity : AppCompatActivity() {
                     steadyFrameIndicator.setProcessing(false)
                     val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
                     intent.putExtra("imagePath", uri);
-                    intent.putExtra("qrCode", lastBarcodeDetectionResult.qrCode)
+                    intent.putExtra("qrCode", lastCaptureDetectionResult.qrCode)
                     intent.putExtra("qrBoundingBox", lastEnhancedQrBoundingBox?.toApiString())
                     startActivity(intent);
                 }
@@ -265,7 +264,7 @@ class CaptureActivity : AppCompatActivity() {
                         .build()
                         .also {
                             it
-                                .setAnalyzer(cameraExecutor, barcodeDetector)
+                                .setAnalyzer(cameraExecutor, captureArtifactDetector)
                         }
 
                 try {
@@ -281,6 +280,9 @@ class CaptureActivity : AppCompatActivity() {
                                 imageCapture,
                                 imageAnalyzer
                             )
+
+                    // enable this for flash
+//                    camera.cameraControl.enableTorch(true)
 
                     val camera2Control =
                         Camera2CameraControl
@@ -348,7 +350,7 @@ class CaptureActivity : AppCompatActivity() {
                                 imageProcessor
                                     .processImage(
                                         photoFile,
-                                        lastBarcodeDetectionResult
+                                        lastCaptureDetectionResult
                                     )
                             }
                     }

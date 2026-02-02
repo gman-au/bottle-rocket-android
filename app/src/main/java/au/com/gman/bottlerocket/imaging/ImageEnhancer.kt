@@ -3,7 +3,7 @@ package au.com.gman.bottlerocket.imaging
 import android.graphics.Bitmap
 import android.graphics.PointF
 import android.util.Log
-import au.com.gman.bottlerocket.domain.BarcodeDetectionResult
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.cropToPageBounds
@@ -22,7 +22,7 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
 
     override fun processImageWithMatchedTemplate(
         bitmap: Bitmap,
-        detectionResult: BarcodeDetectionResult
+        detectionResult: CaptureDetectionResult
     ): ImageEnhancementResponse? {
 
         if (!detectionResult.matchFound ||
@@ -67,6 +67,11 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
                 PointF(0F, 0F)
             )
 
+        val qrOverlay =
+            detectionResult
+                .feedbackOverlayPaths
+                .first()
+
         // Scale the overlay from ImageAnalysis coordinates to bitmap coordinates
         val scaledPageOverlay =
             detectionResult
@@ -75,13 +80,12 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
 
         // Scale the QR overlay the same way
         val scaledQrOverlay =
-            detectionResult
-                .qrCodeOverlayPath
+            qrOverlay
                 ?.scaleUpWithOffset(scaleFactor)
 
         Log.d(TAG, "Original overlay: ${detectionResult.pageOverlayPath}")
         Log.d(TAG, "Scaled overlay: $scaledPageOverlay")
-        Log.d(TAG, "Original QR overlay: ${detectionResult.qrCodeOverlayPath}")
+        Log.d(TAG, "Original QR overlay: ${detectionResult.feedbackOverlayPaths}")
         Log.d(TAG, "Scaled QR overlay: $scaledQrOverlay")
 
         val enhancedBitmap =
