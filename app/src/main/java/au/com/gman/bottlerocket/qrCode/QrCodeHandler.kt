@@ -6,7 +6,10 @@ import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
+import au.com.gman.bottlerocket.extensions.createFallbackSquare
+import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
+import au.com.gman.bottlerocket.injection.TheContourPointDetector
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
 import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
@@ -22,7 +25,7 @@ class QrCodeHandler @Inject constructor(
     private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val qrPositionalValidator: IQrPositionalValidator,
-    private val edgeDetector: IEdgeDetector
+    @TheContourPointDetector private val edgeDetector: IEdgeDetector
 ) : IQrCodeHandler {
 
     companion object {
@@ -104,14 +107,14 @@ class QrCodeHandler @Inject constructor(
                     // openCV edge detection
                     val detectedEdges =
                         edgeDetector
-                            .detectEdges(mat)
+                            .detectEdges(mat, 4)
 
                     if (detectedEdges?.size == 4) {
                         Log.d(TAG, "Raw edges: $detectedEdges")
 
-                        val orderedPoints = orderPointsClockwise(
-                            detectedEdges.map { PointF(it.x.toFloat(), it.y.toFloat()) }
-                        )
+                        val orderedPoints = (
+                                detectedEdges.map { PointF(it.x.toFloat(), it.y.toFloat()) }
+                                ).orderPointsClockwise()
 
                         // Camera space (Mat coordinates)
                         pageBoundingBoxCamera = RocketBoundingBox(orderedPoints)
@@ -148,11 +151,10 @@ class QrCodeHandler @Inject constructor(
                                         smoothFactor = 0.3f,
                                         maxJumpThreshold = 50f
                                     )
-                        }
-                        else {
+                        } else {
                             matchFound = true
                             outOfBounds = true
-                            pageBoundingBoxPreview = createFallbackSquare(targetSize)
+                            pageBoundingBoxPreview = targetSize.createFallbackSquare()
                             previousPageBounds = null
                             rocketBoundingBoxMedianFilter.reset()
                         }
@@ -199,20 +201,6 @@ class QrCodeHandler @Inject constructor(
             top[1],      // topRight
             bottom[1],   // bottomRight
             bottom[0]    // bottomLeft
-        )
-    }
-
-    private fun createFallbackSquare(targetSize: PointF): RocketBoundingBox {
-        val centerX = targetSize.x / 2f
-        val centerY = targetSize.y / 2f
-
-        val halfSize = minOf(targetSize.x, targetSize.y) * 0.25f // 50% of viewport = 25% from center
-
-        return RocketBoundingBox(
-            topLeft = PointF(centerX - halfSize, centerY - halfSize),
-            topRight = PointF(centerX + halfSize, centerY - halfSize),
-            bottomRight = PointF(centerX + halfSize, centerY + halfSize),
-            bottomLeft = PointF(centerX - halfSize, centerY + halfSize)
         )
     }
 }

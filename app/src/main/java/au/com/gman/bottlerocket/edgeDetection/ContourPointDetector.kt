@@ -1,4 +1,4 @@
-package au.com.gman.bottlerocket.qrCode
+package au.com.gman.bottlerocket.edgeDetection
 
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import org.opencv.core.Mat
@@ -9,8 +9,8 @@ import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc
 import javax.inject.Inject
 
-class ContourEdgeDetector @Inject constructor() : IEdgeDetector {
-    override fun detectEdges(src: Mat): List<Point>? {
+class ContourPointDetector @Inject constructor() : IEdgeDetector {
+    override fun detectEdges(src: Mat, lookFor: Int): List<Point>? {
 
         // Convert to grayscale
         val gray = Mat()
@@ -45,7 +45,7 @@ class ContourEdgeDetector @Inject constructor() : IEdgeDetector {
             Imgproc.approxPolyDP(MatOfPoint2f(*contour.toArray()), approx, 0.02 * peri, true)
 
             // Look for a 4-point contour (document shape)
-            if (approx.total() == 4L) {
+            if (approx.total() == lookFor.toLong()) {
                 docContour = approx
                 break
             }

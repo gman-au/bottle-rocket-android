@@ -53,7 +53,7 @@ import javax.inject.Inject
 class CaptureActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var barcodeDetector: ICaptureArtifactDetector
+    lateinit var captureArtifactDetector: ICaptureArtifactDetector
 
     @Inject
     lateinit var imageProcessor: IImageProcessor
@@ -104,7 +104,7 @@ class CaptureActivity : AppCompatActivity() {
 
         steadyFrameIndicator.setProcessing(false)
 
-        barcodeDetector
+        captureArtifactDetector
             .setListener(object : ICaptureDetectionListener {
                 override fun onDetectionSuccess(captureDetectionResult: CaptureDetectionResult) {
                     runOnUiThread {
@@ -264,7 +264,7 @@ class CaptureActivity : AppCompatActivity() {
                         .build()
                         .also {
                             it
-                                .setAnalyzer(cameraExecutor, barcodeDetector)
+                                .setAnalyzer(cameraExecutor, captureArtifactDetector)
                         }
 
                 try {
@@ -280,6 +280,9 @@ class CaptureActivity : AppCompatActivity() {
                                 imageCapture,
                                 imageAnalyzer
                             )
+
+                    // enable this for flash
+                    camera.cameraControl.enableTorch(true)
 
                     val camera2Control =
                         Camera2CameraControl

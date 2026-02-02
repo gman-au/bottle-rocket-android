@@ -10,6 +10,7 @@ import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
 import au.com.gman.bottlerocket.interfaces.IViewportRescaler
+import au.com.gman.bottlerocket.scanning.CornerPointDetector
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -22,7 +23,8 @@ abstract class ScanningModule {
 
     @Binds
     abstract fun bindBarCodeDetector(
-        barcodeDetector: BarcodeDetector
+//        barcodeDetector: BarcodeDetector
+        cornerPointDetector: CornerPointDetector
     ): ICaptureArtifactDetector
 
     @Singleton

@@ -129,12 +129,8 @@ fun RocketBoundingBox.round(): RocketBoundingBox {
     )
 }
 
-fun toPointArray(points: Array<out Point>?): Array<Point> {
-    return points?.toList()?.toTypedArray() ?: arrayOf()
-}
 
-
-fun RocketBoundingBox.toApiString() : String = buildString {
+fun RocketBoundingBox.toApiString(): String = buildString {
     append("${topLeft.x},${topLeft.y},")
     append("${topRight.x},${topRight.y},")
     append("${bottomRight.x},${bottomRight.y},")
@@ -150,7 +146,7 @@ fun RocketBoundingBox.isOutOfBounds(
             this.bottomLeft.isOutOfBounds(bounds)
 }
 
-fun RocketBoundingBox.matchQrToOverlayTransform(pageOverlay: RocketBoundingBox) : RocketBoundingBox {
+fun RocketBoundingBox.matchQrToOverlayTransform(pageOverlay: RocketBoundingBox): RocketBoundingBox {
     val topWidth = distance(pageOverlay.topLeft, pageOverlay.topRight)
     val bottomWidth = distance(pageOverlay.bottomLeft, pageOverlay.bottomRight)
     val leftHeight = distance(pageOverlay.topLeft, pageOverlay.bottomLeft)
@@ -205,15 +201,6 @@ fun RocketBoundingBox.matchQrToOverlayTransform(pageOverlay: RocketBoundingBox) 
     }
 
     return qrBoxTransformed
-}
-
-fun PointF.isOutOfBounds(
-    bounds: PointF
-): Boolean {
-    return this.x < 0 ||
-            this.x > bounds.x ||
-            this.y < 0 ||
-            this.y > bounds.y
 }
 
 private fun distance(p1: PointF, p2: PointF): Float {

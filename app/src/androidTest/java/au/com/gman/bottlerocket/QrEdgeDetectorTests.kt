@@ -1,7 +1,7 @@
 import android.graphics.BitmapFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import au.com.gman.bottlerocket.qrCode.ContourEdgeDetector
+import au.com.gman.bottlerocket.edgeDetection.ContourPointDetector
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.opencv.android.OpenCVLoader
@@ -22,8 +22,8 @@ class QrEdgeDetectorTests {
         val mat = Mat()
         Utils.bitmapToMat(bitmap, mat)
 
-        val sut = ContourEdgeDetector()
-        val edges = sut.detectEdges(mat)
+        val sut = ContourPointDetector()
+        val edges = sut.detectEdges(mat, 4)
 
         // Breakpoint here
         println("Detected ${edges?.size ?: 0} edge points")
