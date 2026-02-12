@@ -26,6 +26,14 @@
                 android:textAlignment="center"
                 android:textSize="10pt" />
 
+            <Button
+                android:id="@+id/scanQrButton"
+                style="@style/Theme.BottleRocket.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/scan_qr_code" />
+
             <TextView
                 android:id="@+id/apiServerUrlTitle"
                 style="@style/Theme.BottleRocket.TextView"

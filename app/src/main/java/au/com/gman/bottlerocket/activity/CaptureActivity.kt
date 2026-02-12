@@ -89,7 +89,7 @@ class CaptureActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_capture)
+        setContentView(R.layout.activity_capture_image)
         checkStoragePermission()
 
         previewView = findViewById(R.id.previewView)
