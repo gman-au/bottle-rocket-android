@@ -131,14 +131,9 @@ class SettingsActivity : AppCompatActivity() {
                 appSettings.username = usernameInput.text.toString().trim()
                 appSettings.password = passwordInput.text.toString().trim()
 
-                Toast
-                    .makeText(
-                        this,
-                        "Settings saved.",
-                        Toast.LENGTH_LONG
-                    )
-                    .show()
-
+                val intent = Intent(this, RestartRequiredActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
                 finish()
             }
 

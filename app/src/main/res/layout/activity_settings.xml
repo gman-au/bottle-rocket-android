@@ -28,10 +28,10 @@
 
             <Button
                 android:id="@+id/scanQrButton"
-                style="@style/Theme.BottleRocket.Button"
+                style="@style/Theme.BottleRocket.Button.Info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="32dp"
                 android:text="@string/scan_qr_code" />
 
             <TextView

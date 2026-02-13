@@ -77,6 +77,14 @@
                 <action android:name="android.intent.action.SERVER_WARNING" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".activity.RestartRequiredActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BottleRocket">
+            <intent-filter>
+                <action android:name="android.intent.action.RESTART_REQUIRED" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

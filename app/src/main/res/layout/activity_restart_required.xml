@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/iconImage"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:contentDescription="@string/settings_updated"
+        android:src="@android:drawable/ic_popup_sync"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="80dp" />
+
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_updated"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        style="@style/Theme.BottleRocket.Text.Warning"
+        app:layout_constraintTop_toBottomOf="@id/iconImage"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp" />
+
+    <TextView
+        android:id="@+id/messageText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/warning_restart"
+        android:textSize="16sp"
+        android:gravity="center"
+        style="@style/Theme.BottleRocket.TextView"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/restartButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="@style/Theme.BottleRocket.Button"
+        android:text="@string/close_app"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        app:layout_constraintTop_toBottomOf="@id/messageText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
