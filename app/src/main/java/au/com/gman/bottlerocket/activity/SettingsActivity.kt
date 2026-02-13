@@ -1,5 +1,6 @@
 package au.com.gman.bottlerocket.activity
 
+import android.content.Intent
 import au.com.gman.bottlerocket.contracts.ConnectionTestResponse
 import android.os.Bundle
 import android.util.Log
@@ -29,6 +30,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var urlInput: EditText
     private lateinit var usernameInput: EditText
     private lateinit var passwordInput: EditText
+
+    private lateinit var scanQrButton: Button
     private lateinit var saveButton: Button
     private lateinit var resetButton: Button
     private lateinit var testConnectionButton: Button
@@ -38,6 +41,16 @@ class SettingsActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "SettingsActivity"
+        private const val QR_SCAN_REQUEST = 101
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == QR_SCAN_REQUEST && resultCode == RESULT_OK && data != null) {
+            data.getStringExtra("server")?.let { urlInput.setText(it) }
+            data.getStringExtra("username")?.let { usernameInput.setText(it) }
+            data.getStringExtra("password")?.let { passwordInput.setText(it) }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +65,7 @@ class SettingsActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progressBar)
         usernameInput = findViewById(R.id.credentialsUserInput)
         passwordInput = findViewById(R.id.credentialsPasswordInput)
+        scanQrButton = findViewById(R.id.scanQrButton)
 
         // Load current settings
         urlInput.setText(appSettings.apiBaseUrl)
@@ -62,6 +76,11 @@ class SettingsActivity : AppCompatActivity() {
             .setOnClickListener {
                 finish()
             }
+
+        scanQrButton.setOnClickListener {
+            val intent = Intent(this, QrAuthActivity::class.java)
+            startActivityForResult(intent, QR_SCAN_REQUEST)
+        }
 
         testConnectionButton
             .setOnClickListener {
@@ -112,14 +131,9 @@ class SettingsActivity : AppCompatActivity() {
                 appSettings.username = usernameInput.text.toString().trim()
                 appSettings.password = passwordInput.text.toString().trim()
 
-                Toast
-                    .makeText(
-                        this,
-                        "Settings saved.",
-                        Toast.LENGTH_LONG
-                    )
-                    .show()
-
+                val intent = Intent(this, RestartRequiredActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
                 finish()
             }
 
@@ -128,11 +142,12 @@ class SettingsActivity : AppCompatActivity() {
                 appSettings
                     .resetToDefault()
 
-                urlInput
-                    .setText(appSettings.apiBaseUrl)
+                urlInput.setText(appSettings.apiBaseUrl)
+                usernameInput.setText(appSettings.username)
+                passwordInput.setText(appSettings.password)
 
                 Toast
-                    .makeText(this, "Reset to default URL", Toast.LENGTH_SHORT)
+                    .makeText(this, "Reset to default", Toast.LENGTH_SHORT)
                     .show()
             }
 

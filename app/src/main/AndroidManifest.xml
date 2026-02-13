@@ -42,7 +42,15 @@
             android:exported="true"
             android:theme="@style/Theme.BottleRocket">
             <intent-filter>
-                <action android:name="android.intent.action.CAPTURE" />
+                <action android:name="android.intent.action.CAPTURE_IMAGE" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activity.QrAuthActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BottleRocket">
+            <intent-filter>
+                <action android:name="android.intent.action.CAPTURE_AUTH" />
             </intent-filter>
         </activity>
         <activity
@@ -67,6 +75,14 @@
             android:theme="@style/Theme.BottleRocket">
             <intent-filter>
                 <action android:name="android.intent.action.SERVER_WARNING" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activity.RestartRequiredActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BottleRocket">
+            <intent-filter>
+                <action android:name="android.intent.action.RESTART_REQUIRED" />
             </intent-filter>
         </activity>
     </application>

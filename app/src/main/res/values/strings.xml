@@ -22,4 +22,8 @@
     <string name="continue_to_main">Continue</string>
     <string name="warning_server">Warning - could not connect to Bottle Rocket server. \nPlease verify your Bottle Rocket server in order to detect QR code pages.</string>
     <string name="retry">Retry</string>
+    <string name="scan_qr_code">Scan QR Code</string>
+    <string name="settings_updated">Settings Updated</string>
+    <string name="warning_restart">Your server settings have been saved.\n\nPlease restart the app to connect to the new server and download the page templates.</string>
+    <string name="close_app">Close</string>
 </resources>

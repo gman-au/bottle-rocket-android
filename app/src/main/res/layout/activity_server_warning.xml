@@ -17,7 +17,7 @@
 
         <TextView
             android:id="@+id/apiServerUrlHelper"
-            style="@style/Theme.BottleRocket.Warning"
+            style="@style/Theme.BottleRocket.Text.Warning"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="18dp"
