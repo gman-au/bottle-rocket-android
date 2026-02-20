@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,6 +15,12 @@ android {
     namespace = "au.com.gman.bottlerocket"
     compileSdk = 36
 
+    fun Packaging.() {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     defaultConfig {
         applicationId = "au.com.gman.bottlerocket"
         minSdk = 24
@@ -20,6 +28,15 @@ android {
         versionCode = project.findProperty("versionCode") as Int? ?: localVersionCode
         versionName = project.findProperty("versionName") as String? ?: localVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            // For ndk-build, instead use the ndkBuild block.
+            cmake {
+                // Passes optional arguments to CMake.
+                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+            }
+        }
+
     }
 
     signingConfigs {
@@ -49,6 +66,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs = listOf("-XXLanguage:+PropertyParamAnnotationDefaultTargetMode")
     }
 
     buildFeatures {
@@ -82,7 +100,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     // CameraX
-    val cameraxVersion = "1.3.0"
+    val cameraxVersion = "1.5.3"
     implementation("androidx.camera:camera-core:${cameraxVersion}")
     implementation("androidx.camera:camera-camera2:${cameraxVersion}")
     implementation("androidx.camera:camera-lifecycle:${cameraxVersion}")
@@ -90,7 +108,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
     // ML Kit Barcode Scanning (for QR codes)
-    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     // Optional: Image processing
     implementation("androidx.camera:camera-extensions:${cameraxVersion}")
@@ -106,5 +124,5 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.57.1")
     ksp("com.google.dagger:hilt-android-compiler:2.57.1")
 
-    implementation("org.opencv:opencv:4.11.0")
+    implementation("org.opencv:opencv:4.13.0")
 }
