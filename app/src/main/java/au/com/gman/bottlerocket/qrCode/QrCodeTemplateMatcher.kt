@@ -13,7 +13,7 @@ class QrCodeTemplateMatcher @Inject constructor(
         if (qrCode == null) return null
 
         val template = templateCache.getTemplates()
-            .firstOrNull { it.qrCode == qrCode }
+            .firstOrNull { it.qrCode == qrCode.trim() }
             ?: return null
 
         return PageTemplate(
