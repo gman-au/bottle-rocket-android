@@ -6,12 +6,16 @@
     <color name="purple">#FFFF00FF</color>
     <color name="transparent">#00000000</color>
 
-    <color name="bottle_rocket_dark">#FF093624</color>
-    <color name="bottle_rocket_light">#FF96F7D0</color>
+    <color name="bottle_rocket_dark">#FF0c1d11</color>
+    <color name="bottle_rocket_light">#FFf3e7bf</color>
     <color name="bottle_rocket_light_disabled">#5596F7D0</color>
     <color name="warning">#fff6d06f</color>
     <color name="info">#ff18afe1</color>
     <color name="debug_text">#FFFF0000</color>
+
+    <color name="bottle_rocket_text_primary">#FFffb375</color>
+    <color name="bottle_rocket_text_secondary">#FFf3e7bf</color>
+    <color name="bottle_rocket_text_tertiary">#FF497b2d</color>
 
     <color name="capture_status_green_border">#FF96F7D0</color>
     <color name="capture_status_green_transparent">#4496F7D0</color>
