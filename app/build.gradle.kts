@@ -8,8 +8,8 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-val localVersionName = "v0.0.0.local.dev"
-val localVersionCode = 1
+val localVersionName = "v1.0.0"
+val localVersionCode = 16
 
 android {
     namespace = "au.com.gman.bottlerocket"
