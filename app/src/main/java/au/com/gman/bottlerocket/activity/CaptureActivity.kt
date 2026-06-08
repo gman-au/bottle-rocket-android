@@ -137,7 +137,6 @@ class CaptureActivity : AppCompatActivity() {
                                 } else {
                                     overlayView.setUnmatchedQrCode(null)
                                 }
-                                steadyFrameIndicator.reset()
                             }
                         }
                         else {
@@ -183,6 +182,9 @@ class CaptureActivity : AppCompatActivity() {
 
                     if (!locked) {
                         locked = true
+
+                        // prevent further activity
+                        steadyFrameIndicator.setProcessing(true)
 
                         // take the photo!
                         takePhoto()
@@ -341,9 +343,6 @@ class CaptureActivity : AppCompatActivity() {
 
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
-
-        // prevent further activity
-        steadyFrameIndicator.setProcessing(true)
 
         val photoFile = File(
             cacheDir,

@@ -52,7 +52,6 @@ class SteadyFrameIndicator @Inject constructor() : ISteadyFrameIndicator {
         consecutiveFramesCount = 0
         percentageComplete = 0F
         isOutOfBounds = false
-        isProcessing = false
     }
 
     override fun increment() {
