@@ -5,6 +5,7 @@ data class CaptureDetectionResult(
     val matchFound: Boolean,
     val outOfBounds: Boolean,
     val qrCode: String?,
+    val vendor: String?,
     val pageTemplate: PageTemplate?,
     val pageOverlayPath: RocketBoundingBox?,
     val feedbackOverlayPaths: List<RocketBoundingBox?>,

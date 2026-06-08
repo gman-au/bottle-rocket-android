@@ -33,9 +33,9 @@ import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.extensions.toApiString
 import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
-import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
-import au.com.gman.bottlerocket.interfaces.IFileSaveListener
+import au.com.gman.bottlerocket.interfaces.IDetectionArbiter
 import au.com.gman.bottlerocket.interfaces.IFileIo
+import au.com.gman.bottlerocket.interfaces.IFileSaveListener
 import au.com.gman.bottlerocket.interfaces.IImageProcessingListener
 import au.com.gman.bottlerocket.interfaces.IImageProcessor
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
@@ -53,7 +53,7 @@ import javax.inject.Inject
 class CaptureActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var captureArtifactDetector: ICaptureArtifactDetector
+    lateinit var detectionArbiter: IDetectionArbiter
 
     @Inject
     lateinit var imageProcessor: IImageProcessor
@@ -104,7 +104,7 @@ class CaptureActivity : AppCompatActivity() {
 
         steadyFrameIndicator.setProcessing(false)
 
-        captureArtifactDetector
+        detectionArbiter
             .setListener(object : ICaptureDetectionListener {
                 override fun onDetectionSuccess(captureDetectionResult: CaptureDetectionResult) {
                     runOnUiThread {
@@ -264,7 +264,7 @@ class CaptureActivity : AppCompatActivity() {
                         .build()
                         .also {
                             it
-                                .setAnalyzer(cameraExecutor, captureArtifactDetector)
+                                .setAnalyzer(cameraExecutor, detectionArbiter)
                         }
 
                 try {

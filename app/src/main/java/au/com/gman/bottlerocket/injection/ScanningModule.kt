@@ -1,11 +1,13 @@
 package au.com.gman.bottlerocket.injection
 
 import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
+import au.com.gman.bottlerocket.interfaces.IDetectionArbiter
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
 import au.com.gman.bottlerocket.interfaces.IViewportRescaler
 import au.com.gman.bottlerocket.scanning.BarcodeDetector
+import au.com.gman.bottlerocket.scanning.DetectionArbiter
 import au.com.gman.bottlerocket.scanning.RocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.scanning.ScreenDimensions
 import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
@@ -14,15 +16,27 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Qualifier
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class ScanningModule {
 
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class RocketbookBarcodeDetector
+
+    @Singleton
     @Binds
+    abstract fun bindDetectionArbiter(
+        detectionArbiter: DetectionArbiter
+    ): IDetectionArbiter
+
+    @Binds
+    @RocketbookBarcodeDetector
     abstract fun bindBarCodeDetector(
-        barcodeDetector: BarcodeDetector
+        rocketbookBarcodeDetector: BarcodeDetector
     ): ICaptureArtifactDetector
 
     @Singleton
