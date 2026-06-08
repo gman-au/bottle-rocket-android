@@ -186,6 +186,7 @@ class QrCodeHandler @Inject constructor(
         }
 
         return CaptureDetectionResult(
+            claimed = true,
             codeFound = codeFound,
             matchFound = matchFound,
             outOfBounds = outOfBounds,

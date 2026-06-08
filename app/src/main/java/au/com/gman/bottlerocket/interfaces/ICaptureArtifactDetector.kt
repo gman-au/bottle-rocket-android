@@ -11,5 +11,5 @@ interface ICaptureArtifactDetector {
         rotationDegrees: Int,
         imageWidth: Int,
         imageHeight: Int
-    ): CaptureDetectionResult?
+    ): CaptureDetectionResult
 }

@@ -4,6 +4,7 @@ import android.graphics.PointF
 import android.util.Log
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.injection.ScanningModule
 import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
@@ -14,6 +15,7 @@ import javax.inject.Inject
 
 class DetectionArbiter @Inject constructor(
     @ScanningModule.RocketbookBarcodeDetector private val rocketbookBarcodeDetector: ICaptureArtifactDetector,
+    @ScanningModule.ScribzeeCodeDetector private val scribzeeDetector: ICaptureArtifactDetector,
     private val screenDimensions: IScreenDimensions
 ) : IDetectionArbiter {
 
@@ -23,9 +25,16 @@ class DetectionArbiter @Inject constructor(
 
     private var listener: ICaptureDetectionListener? = null
 
+    private var currentDetectionClaimant: ICaptureArtifactDetector? = null
+
     override fun setListener(listener: ICaptureDetectionListener) {
         this.listener = listener
     }
+
+    private val allDetectors: Set<ICaptureArtifactDetector> = setOf(
+        rocketbookBarcodeDetector,
+        scribzeeDetector
+    )
 
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
@@ -69,12 +78,52 @@ class DetectionArbiter @Inject constructor(
             screenDimensions
                 .setScreenRotation(rotationDegrees)
 
-            // TODO: iterate with claims
-            val detectionResult = rocketbookBarcodeDetector.capture(imageProxy, image, rotationDegrees, imageWidth, imageHeight);
+            // current non-null claimant takes precedence, otherwise check others for a claimant
+            var detectionResult: CaptureDetectionResult = CaptureDetectionResult.EMPTY
 
-            if (detectionResult != null) {
-                listener?.onDetectionSuccess(detectionResult)
+            if (currentDetectionClaimant != null) {
+                detectionResult =
+                    currentDetectionClaimant
+                        ?.capture(
+                            imageProxy,
+                            image,
+                            rotationDegrees,
+                            imageWidth,
+                            imageHeight
+                        )!!
             }
+
+            if (!detectionResult.claimed) {
+                val otherDetectors =
+                    allDetectors
+                        .filter { it != currentDetectionClaimant }
+
+                for (detector in otherDetectors) {
+                    detectionResult =
+                        detector
+                            .capture(
+                                imageProxy,
+                                image,
+                                rotationDegrees,
+                                imageWidth,
+                                imageHeight
+                            )
+
+                    if (detectionResult.claimed) {
+                        currentDetectionClaimant = detector
+                        break
+                    }
+                }
+            }
+
+            Log.d(TAG, "Current detection claimant: ${currentDetectionClaimant?.let {it::class.toString()}}")
+
+            // TODO: iterate with claims
+            if (!detectionResult.claimed) {
+                currentDetectionClaimant = null
+            }
+
+            listener?.onDetectionSuccess(detectionResult)
 
         } else {
             imageProxy

@@ -12,6 +12,7 @@ import android.util.Log
 import android.util.Range
 import android.widget.ImageButton
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.camera2.interop.Camera2CameraControl
@@ -87,6 +88,10 @@ class CaptureActivity : AppCompatActivity() {
 
     private var codeFound = false
 
+    private var claimed = false
+
+    private var locked = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture_image)
@@ -109,27 +114,34 @@ class CaptureActivity : AppCompatActivity() {
                 override fun onDetectionSuccess(captureDetectionResult: CaptureDetectionResult) {
                     runOnUiThread {
 
+                        claimed = captureDetectionResult.claimed
                         codeFound = captureDetectionResult.codeFound
                         matchFound = captureDetectionResult.matchFound
                         outOfBounds = captureDetectionResult.outOfBounds
 
-                        if (codeFound) {
-                            if (outOfBounds)
-                                steadyFrameIndicator.setOutOfBounds(true)
-                            else
-                                steadyFrameIndicator.setOutOfBounds(false)
-                        } else
-                            steadyFrameIndicator.setOutOfBounds(false)
-
-                        if (matchFound) {
-                            steadyFrameIndicator.increment()
-                            overlayView.setUnmatchedQrCode(null)
-                        } else {
+                        if (claimed) {
                             if (codeFound) {
-                                overlayView.setUnmatchedQrCode(captureDetectionResult.qrCode)
-                            } else {
+                                if (outOfBounds)
+                                    steadyFrameIndicator.setOutOfBounds(true)
+                                else
+                                    steadyFrameIndicator.setOutOfBounds(false)
+                            } else
+                                steadyFrameIndicator.setOutOfBounds(false)
+
+                            if (matchFound) {
+                                steadyFrameIndicator.increment()
                                 overlayView.setUnmatchedQrCode(null)
+                            } else {
+                                if (codeFound) {
+                                    overlayView.setUnmatchedQrCode(captureDetectionResult.qrCode)
+                                } else {
+                                    overlayView.setUnmatchedQrCode(null)
+                                }
+                                steadyFrameIndicator.reset()
                             }
+                        }
+                        else {
+                            overlayView.setUnmatchedQrCode(null)
                             steadyFrameIndicator.reset()
                         }
 
@@ -168,26 +180,37 @@ class CaptureActivity : AppCompatActivity() {
         steadyFrameIndicator
             .setListener(object : ISteadyFrameListener {
                 override fun onSteadyResult() {
-                    // prevent further activity
-                    steadyFrameIndicator.setProcessing(true)
 
-                    // take the photo!
-                    takePhoto()
+                    if (!locked) {
+                        locked = true
 
-                    // reset
-                    steadyFrameIndicator.reset()
+                        // take the photo!
+                        takePhoto()
+
+                        // reset
+                        steadyFrameIndicator.reset()
+                    }
                 }
             })
+
+        val activityLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_CANCELED) {
+                steadyFrameIndicator.setProcessing(false)
+                locked = false
+            }
+        }
 
         fileIo
             .setSaveListener(object : IFileSaveListener {
                 override fun onFileSaveSuccess(uri: Uri) {
-                    steadyFrameIndicator.setProcessing(false)
                     val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
                     intent.putExtra("imagePath", uri);
                     intent.putExtra("qrCode", lastCaptureDetectionResult.qrCode)
                     intent.putExtra("qrBoundingBox", lastEnhancedQrBoundingBox?.toApiString())
-                    startActivity(intent);
+                    activityLauncher.launch(intent);
+                    steadyFrameIndicator.setProcessing(false)
                 }
 
                 override fun onFileSaveFailure() {
@@ -198,7 +221,6 @@ class CaptureActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
                     }
-                    steadyFrameIndicator.setProcessing(false)
                 }
             })
 
@@ -319,6 +341,9 @@ class CaptureActivity : AppCompatActivity() {
 
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
+
+        // prevent further activity
+        steadyFrameIndicator.setProcessing(true)
 
         val photoFile = File(
             cacheDir,

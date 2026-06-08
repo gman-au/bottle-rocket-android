@@ -10,6 +10,7 @@ import au.com.gman.bottlerocket.scanning.BarcodeDetector
 import au.com.gman.bottlerocket.scanning.DetectionArbiter
 import au.com.gman.bottlerocket.scanning.RocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.scanning.ScreenDimensions
+import au.com.gman.bottlerocket.scanning.ScribzeeDetector
 import au.com.gman.bottlerocket.scanning.SteadyFrameIndicator
 import au.com.gman.bottlerocket.scanning.ViewportRescaler
 import dagger.Binds
@@ -23,20 +24,30 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class ScanningModule {
 
-    @Qualifier
-    @Retention(AnnotationRetention.BINARY)
-    annotation class RocketbookBarcodeDetector
-
     @Singleton
     @Binds
     abstract fun bindDetectionArbiter(
         detectionArbiter: DetectionArbiter
     ): IDetectionArbiter
 
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class RocketbookBarcodeDetector
+
     @Binds
     @RocketbookBarcodeDetector
-    abstract fun bindBarCodeDetector(
+    abstract fun bindRocketbookBarCodeDetector(
         rocketbookBarcodeDetector: BarcodeDetector
+    ): ICaptureArtifactDetector
+
+    @Qualifier
+    @Retention(AnnotationRetention.BINARY)
+    annotation class ScribzeeCodeDetector
+
+    @Binds
+    @ScribzeeCodeDetector
+    abstract fun bindScribzeeDetector(
+        scribzeeDetector: ScribzeeDetector
     ): ICaptureArtifactDetector
 
     @Singleton

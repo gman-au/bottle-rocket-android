@@ -38,9 +38,9 @@ class BarcodeDetector @Inject constructor(
                           rotationDegrees: Int,
                           imageWidth: Int,
                           imageHeight: Int
-    ): CaptureDetectionResult? {
+    ): CaptureDetectionResult {
 
-        var barcodeDetectionResult: CaptureDetectionResult? = null
+        var barcodeDetectionResult: CaptureDetectionResult = CaptureDetectionResult.EMPTY
 
         try {
             val barcodes = Tasks.await(scanner.process(image))
@@ -48,15 +48,16 @@ class BarcodeDetector @Inject constructor(
             val barcode = barcodes.firstOrNull()
             val mat = imageProxy.toMat(image, rotationDegrees)!!
 
-            barcodeDetectionResult =
-                qrCodeHandler
-                    .handle(
-                        barcode,
-                        mat,
-                        imageWidth,
-                        imageHeight
-                    )
-
+            if (barcode != null) {
+                barcodeDetectionResult =
+                    qrCodeHandler
+                        .handle(
+                            barcode,
+                            mat,
+                            imageWidth,
+                            imageHeight
+                        )
+            }
         } catch (e: Exception) {
             // handle cancellation / execution exceptions
         } finally {
