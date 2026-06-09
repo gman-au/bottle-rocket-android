@@ -11,16 +11,12 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class EdgeDetectionModule {
+abstract class MarkerDetectionModule {
     @Binds
     abstract fun bindEdgeDetectionModule(
         edgeDetector: ContourPointDetector
     ): IEdgeDetector
-}
 
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class ScribzeeMarkerDetectionModule {
     @Binds
     abstract fun bindScribzeeMarkerDetectionModule(
         scribzeeMarkerDetector: ScribzeeMarkerDetector
