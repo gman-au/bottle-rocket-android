@@ -61,7 +61,6 @@ class BarcodeDetector @Inject constructor(
         } catch (e: Exception) {
             // handle cancellation / execution exceptions
         } finally {
-            imageProxy.close()
         }
 
         return barcodeDetectionResult

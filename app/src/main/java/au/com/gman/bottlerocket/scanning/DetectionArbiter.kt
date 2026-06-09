@@ -125,6 +125,9 @@ class DetectionArbiter @Inject constructor(
 
             listener?.onDetectionSuccess(detectionResult)
 
+            imageProxy
+                .close()
+
         } else {
             imageProxy
                 .close()

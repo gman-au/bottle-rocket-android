@@ -5,6 +5,7 @@ import android.graphics.PointF
 import android.util.Log
 import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
+import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.cropToPageBounds
 import au.com.gman.bottlerocket.extensions.enhanceImage
@@ -26,8 +27,7 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
     ): ImageEnhancementResponse? {
 
         if (!detectionResult.matchFound ||
-            detectionResult.pageOverlayPath == null ||
-            detectionResult.pageTemplate == null
+            detectionResult.pageOverlayPath == null
         ) {
             return null
         }
@@ -67,36 +67,39 @@ class ImageEnhancer @Inject constructor() : IImageEnhancer {
                 PointF(0F, 0F)
             )
 
-        val qrOverlay =
-            detectionResult
-                .feedbackOverlayPaths
-                .first()
-
         // Scale the overlay from ImageAnalysis coordinates to bitmap coordinates
         val scaledPageOverlay =
             detectionResult
                 .pageOverlayPath
                 .scaleUpWithOffset(scaleFactor)
 
-        // Scale the QR overlay the same way
-        val scaledQrOverlay =
-            qrOverlay
-                ?.scaleUpWithOffset(scaleFactor)
-
         Log.d(TAG, "Original overlay: ${detectionResult.pageOverlayPath}")
         Log.d(TAG, "Scaled overlay: $scaledPageOverlay")
-        Log.d(TAG, "Original QR overlay: ${detectionResult.feedbackOverlayPaths}")
-        Log.d(TAG, "Scaled QR overlay: $scaledQrOverlay")
+
+        var qrBoxTransformed: RocketBoundingBox? = null
+
+        if (detectionResult.feedbackOverlayPaths.isNotEmpty()) {
+            val qrOverlay =
+                detectionResult
+                    .feedbackOverlayPaths
+                    .first()
+
+            // Scale the QR overlay the same way
+            val scaledQrOverlay =
+                qrOverlay
+                    ?.scaleUpWithOffset(scaleFactor)
+
+            Log.d(TAG, "Original QR overlay: ${detectionResult.feedbackOverlayPaths}")
+            Log.d(TAG, "Scaled QR overlay: $scaledQrOverlay")
+
+            qrBoxTransformed =
+                scaledQrOverlay
+                    ?.matchQrToOverlayTransform(scaledPageOverlay)
+        }
 
         val enhancedBitmap =
             rotatedBitmap
                 .enhanceImage()
-        //finalQrOverlay,
-        //finalOverlay
-
-        val qrBoxTransformed =
-            scaledQrOverlay
-                ?.matchQrToOverlayTransform(scaledPageOverlay)
 
         val croppedBitmap =
             enhancedBitmap

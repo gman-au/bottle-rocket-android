@@ -32,7 +32,7 @@ class QrCodeHandler @Inject constructor(
     companion object {
         private const val TAG = "QrCodeHandler"
 
-        private const val ROCKETBOOK_VENDOR = "Rocketbook"
+        private const val VENDOR_ROCKETBOOK = "Rocketbook"
     }
 
     private var previousPageBounds: RocketBoundingBox? = null
@@ -198,7 +198,7 @@ class QrCodeHandler @Inject constructor(
             indicatorBoxesPreview = qrIndicatorBoxes.map {
                 IndicatorBox(qrIndicatorStatus, it)
             },
-            vendor = ROCKETBOOK_VENDOR,
+            vendor = VENDOR_ROCKETBOOK,
             cameraRotation = cameraRotation,
             boundingBoxRotation = 0F,
             scalingFactor = scalingFactor,
