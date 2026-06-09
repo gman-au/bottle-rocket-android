@@ -58,13 +58,14 @@ class ApiService @Inject constructor(
                             val originalRequest = chain.request()
 
                             // Add auth header if credentials provided
-                            val requestBuilder = if (username.isNotEmpty() && password.isNotEmpty()) {
-                                val credentials = Credentials.basic(username, password)
-                                originalRequest.newBuilder()
-                                    .header("Authorization", credentials)
-                            } else {
-                                originalRequest.newBuilder()
-                            }
+                            val requestBuilder =
+                                if (username.isNotEmpty() && password.isNotEmpty()) {
+                                    val credentials = Credentials.basic(username, password)
+                                    originalRequest.newBuilder()
+                                        .header("Authorization", credentials)
+                                } else {
+                                    originalRequest.newBuilder()
+                                }
 
                             chain.proceed(requestBuilder.build())
                         }
@@ -131,6 +132,7 @@ class ApiService @Inject constructor(
         imageUri: Uri,
         qrCode: String,
         qrBoundingBox: String,
+        vendor: String,
         cacheDir: File,
         contentResolver: ContentResolver
     ) {
@@ -159,12 +161,19 @@ class ApiService @Inject constructor(
                         )
 
                 val qrCodePart = qrCode.toRequestBody("text/plain".toMediaTypeOrNull())
-                val qrBoundingBoxPart = qrBoundingBox.toRequestBody("text/plain".toMediaTypeOrNull())
+                val qrBoundingBoxPart =
+                    qrBoundingBox.toRequestBody("text/plain".toMediaTypeOrNull())
+                val vendor = vendor.toRequestBody("text/plain".toMediaTypeOrNull())
 
                 // Make actual API call
                 val httpResponse =
                     retrofitApi
-                        .apiCaptureProcess(imagePart, qrCodePart, qrBoundingBoxPart)
+                        .apiCaptureProcess(
+                            imagePart,
+                            qrCodePart,
+                            qrBoundingBoxPart,
+                            vendor
+                        )
 
                 // Delete temp file
                 file

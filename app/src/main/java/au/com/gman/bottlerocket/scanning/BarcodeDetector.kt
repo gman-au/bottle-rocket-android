@@ -1,27 +1,19 @@
 package au.com.gman.bottlerocket.scanning
 
-import android.graphics.PointF
-import android.util.Log
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageProxy
+import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.extensions.toMat
-import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
 import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
-import au.com.gman.bottlerocket.interfaces.IScreenDimensions
+import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import javax.inject.Inject
 
 class BarcodeDetector @Inject constructor(
-    private val qrCodeHandler: IQrCodeHandler,
-    private val screenDimensions: IScreenDimensions
+    private val qrCodeHandler: IQrCodeHandler
 ) : ICaptureArtifactDetector {
-
-    companion object {
-        private const val TAG = "BarcodeDetector"
-    }
 
     private val scannerOptions:
             BarcodeScannerOptions =
@@ -37,81 +29,40 @@ class BarcodeDetector @Inject constructor(
         BarcodeScanning
             .getClient(scannerOptions)
 
-    private var listener: ICaptureDetectionListener? = null
-
-    override fun setListener(listener: ICaptureDetectionListener) {
-        this.listener = listener
+    companion object {
+        private const val TAG = "BarcodeDetector"
     }
 
-    @ExperimentalGetImage
-    override fun analyze(imageProxy: ImageProxy) {
-        val mediaImage =
-            imageProxy
-                .image
+    override fun capture( imageProxy: ImageProxy,
+                          image: InputImage,
+                          rotationDegrees: Int,
+                          imageWidth: Int,
+                          imageHeight: Int
+    ): CaptureDetectionResult {
 
-        if (mediaImage != null) {
+        var barcodeDetectionResult: CaptureDetectionResult = CaptureDetectionResult.EMPTY
 
-            val rotationDegrees =
-                imageProxy
-                    .imageInfo
-                    .rotationDegrees
+        try {
+            val barcodes = Tasks.await(scanner.process(image))
 
-            val image =
-                InputImage
-                    .fromMediaImage(
-                        mediaImage,
-                        rotationDegrees
-                    )
+            val barcode = barcodes.firstOrNull()
+            val mat = imageProxy.toMat(image, rotationDegrees)!!
 
-            Log.d(TAG, "ImageProxy dimensions: ${imageProxy.width}x${imageProxy.height}")
-            Log.d(TAG, "Rotation degrees: $rotationDegrees")
-
-            val imageWidth =
-                imageProxy
-                    .width
-
-            val imageHeight =
-                imageProxy
-                    .height
-
-            screenDimensions
-                .setSourceSize(
-                    PointF(
-                        imageWidth.toFloat(),
-                        imageHeight.toFloat()
-                    )
-                )
-
-            screenDimensions
-                .setScreenRotation(rotationDegrees)
-
-            scanner
-                .process(image)
-                .addOnSuccessListener { barcodes ->
-                    val barcode =
-                        barcodes
-                            .firstOrNull()
-
-                    val mat = imageProxy.toMat(image, rotationDegrees)!!
-
-                    val barcodeDetectionResult =
-                        qrCodeHandler
-                            .handle(
-                                barcode,
-                                mat,
-                                imageWidth,
-                                imageHeight
-                            )
-
-                    listener?.onDetectionSuccess(barcodeDetectionResult)
-                }
-                .addOnCompleteListener {
-                    imageProxy
-                        .close()
-                }
-        } else {
-            imageProxy
-                .close()
+            if (barcode != null) {
+                barcodeDetectionResult =
+                    qrCodeHandler
+                        .handle(
+                            barcode,
+                            mat,
+                            imageWidth,
+                            imageHeight
+                        )
+            }
+        } catch (e: Exception) {
+            // handle cancellation / execution exceptions
+        } finally {
         }
+
+        return barcodeDetectionResult
     }
 }

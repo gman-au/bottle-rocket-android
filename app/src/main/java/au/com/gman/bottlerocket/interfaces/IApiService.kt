@@ -12,6 +12,7 @@ interface IApiService {
         imageUri: Uri,
         qrCode: String,
         qrBoundingBox: String,
+        vendor: String,
         cacheDir: File,
         contentResolver: ContentResolver
     )

@@ -203,6 +203,19 @@ fun RocketBoundingBox.matchQrToOverlayTransform(pageOverlay: RocketBoundingBox):
     return qrBoxTransformed
 }
 
+fun List<RocketBoundingBox>.orderBoxesClockwise(): Array<RocketBoundingBox> {
+    val sorted = this.sortedBy { it.topLeft.y }
+    val top = sorted.take(2).sortedBy { it.topLeft.x }
+    val bottom = sorted.takeLast(2).sortedBy { it.topLeft.x }
+
+    return arrayOf(
+        top[0],      // topLeft
+        top[1],      // topRight
+        bottom[1],   // bottomRight
+        bottom[0]    // bottomLeft
+    )
+}
+
 private fun distance(p1: PointF, p2: PointF): Float {
     val dx = p1.x - p2.x
     val dy = p1.y - p2.y
