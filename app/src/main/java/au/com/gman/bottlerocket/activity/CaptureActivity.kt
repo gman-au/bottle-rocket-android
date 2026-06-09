@@ -200,6 +200,7 @@ class CaptureActivity : AppCompatActivity() {
         ) { result ->
             if (result.resultCode == RESULT_CANCELED) {
                 steadyFrameIndicator.setProcessing(false)
+                steadyFrameIndicator.reset()
                 locked = false
             }
         }

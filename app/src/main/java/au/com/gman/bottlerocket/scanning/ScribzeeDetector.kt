@@ -11,11 +11,9 @@ import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
 import au.com.gman.bottlerocket.extensions.createFallbackSquare
 import au.com.gman.bottlerocket.extensions.orderBoxesClockwise
-import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.extensions.toMat
 import au.com.gman.bottlerocket.interfaces.ICaptureArtifactDetector
-import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.IScribzeeMarkerDetector
@@ -23,7 +21,6 @@ import com.google.mlkit.vision.common.InputImage
 import javax.inject.Inject
 
 class ScribzeeDetector @Inject constructor(
-    private val edgeDetector: IEdgeDetector,
     private val scribzeeMarkerDetector: IScribzeeMarkerDetector,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val screenDimensions: IScreenDimensions,
@@ -57,7 +54,7 @@ class ScribzeeDetector @Inject constructor(
 
         val qrBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
         val scribzeeIndicatorBoxes: MutableList<RocketBoundingBox?> = mutableListOf()
-        var qrIndicatorStatus: CaptureStatusEnum = CaptureStatusEnum.NOT_FOUND
+        var qrIndicatorStatus: CaptureStatusEnum
 
         val mat =
             imageProxy
@@ -97,68 +94,83 @@ class ScribzeeDetector @Inject constructor(
                 scribzeeMarkerDetector
                     .findScribzeeMarkers(mat, imageWidth, imageHeight)
 
-            // Get QR code bounding box in camera space
             scribzeeMarkers.map { box ->
                 indicatorBox =
                     box
                         .scaleUpWithOffset(scalingFactor)
-
-                Log.d(TAG, "QR preview: $indicatorBox")
 
                 scribzeeIndicatorBoxes.add(indicatorBox)
             }
 
             if (scribzeeMarkers.size == 4) {
                 Log.d(TAG, "Markers found: $scribzeeMarkers")
+                qrIndicatorStatus = CaptureStatusEnum.CAPTURING
 
                 val orderedMarkers =
                     scribzeeMarkers
                         .orderBoxesClockwise()
 
+                val orderedPoints: Array<PointF> = arrayOf(
+                    PointF(orderedMarkers[0].bottomRight.x, orderedMarkers[0].bottomRight.y),
+                    PointF(orderedMarkers[1].bottomLeft.x, orderedMarkers[1].bottomLeft.y),
+                    PointF(orderedMarkers[2].topLeft.x, orderedMarkers[2].topLeft.y),
+                    PointF(orderedMarkers[3].topRight.x, orderedMarkers[3].topRight.y)
+                )
+
                 // Camera space (Mat coordinates)
                 pageBoundingBoxCamera =
-                    RocketBoundingBox(
-                        orderedMarkers[0].bottomRight.x, orderedMarkers[0].bottomRight.y,
-                        orderedMarkers[1].bottomLeft.x, orderedMarkers[1].bottomLeft.y,
-                        orderedMarkers[2].topLeft.x, orderedMarkers[2].topLeft.y,
-                        orderedMarkers[3].topRight.x, orderedMarkers[3].topRight.y
-                    )
+                    RocketBoundingBox(orderedPoints)
 
-                // Preview space (scaled for display)
-                pageBoundingBoxPreview =
-                    pageBoundingBoxCamera
-                        .scaleUpWithOffset(scalingFactor!!)
+                val hasRightAngles = hasRightAngles(
+                    orderedPoints[0],
+                    orderedPoints[1],
+                    orderedPoints[2],
+                    orderedPoints[3]
+                )
 
-                pageBoundingBoxPreview =
-                    rocketBoundingBoxMedianFilter
-                        .add(pageBoundingBoxPreview)
 
-                Log.d(TAG, "Page camera: $pageBoundingBoxCamera")
-                Log.d(TAG, "Page preview: $pageBoundingBoxPreview")
 
-                previousPageBounds = pageBoundingBoxPreview
+                if (hasRightAngles) {
 
-                claimed = true
-                qrCodeValue = VENDOR_SCRIBZEE
+                    // Preview space (scaled for display)
+                    pageBoundingBoxPreview =
+                        pageBoundingBoxCamera
+                            .scaleUpWithOffset(scalingFactor!!)
 
-                // Apply smoothing to the SCALED version (for preview)
-                pageBoundingBoxPreview =
-                    pageBoundingBoxPreview
-                        .aggressiveSmooth(
-                            previous = previousPageBounds,
-                            smoothFactor = 0.3f,
-                            maxJumpThreshold = 50f
-                        )
+                    pageBoundingBoxPreview =
+                        rocketBoundingBoxMedianFilter
+                            .add(pageBoundingBoxPreview)
 
-                matchFound = true
-                codeFound = true
-                outOfBounds = false
+                    Log.d(TAG, "Page camera: $pageBoundingBoxCamera")
+                    Log.d(TAG, "Page preview: $pageBoundingBoxPreview")
 
-                previousPageBounds = null
-                rocketBoundingBoxMedianFilter.reset()
+                    previousPageBounds = pageBoundingBoxPreview
+
+                    claimed = true
+                    qrCodeValue = VENDOR_SCRIBZEE
+
+                    // Apply smoothing to the SCALED version (for preview)
+                    pageBoundingBoxPreview =
+                        pageBoundingBoxPreview
+                            .aggressiveSmooth(
+                                previous = previousPageBounds,
+                                smoothFactor = 0.3f,
+                                maxJumpThreshold = 50f
+                            )
+
+                    matchFound = true
+                    codeFound = true
+                    outOfBounds = false
+
+                    previousPageBounds = null
+                    rocketBoundingBoxMedianFilter.reset()
+                }
+                else {
+                    previousPageBounds = null
+                    rocketBoundingBoxMedianFilter.reset()
+                }
             } else {
                 previousPageBounds = null
-                claimed = false
                 rocketBoundingBoxMedianFilter.reset()
                 if (scribzeeMarkers.isNotEmpty()) {
                     outOfBounds = true
@@ -187,5 +199,51 @@ class ScribzeeDetector @Inject constructor(
                 sourceImageHeight = imageHeight
             )
         }
+    }
+
+    private fun hasRightAngles(
+        tl: PointF, tr: PointF,
+        br: PointF, bl: PointF,
+        toleranceDegrees: Float = 10f
+    ): Boolean {
+        Log.d(TAG, "hasRightAngles: tl=$tl tr=$tr bl=$bl br=$br")
+
+        // sanity check — TL should have smallest x+y sum
+        // TR should have largest x, smallest y
+        // BL should have smallest x, largest y
+        // BR should have largest x+y sum
+        Log.d(TAG, "hasRightAngles: tl x<tr.x=${tl.x < tr.x} tl.y<bl.y=${tl.y < bl.y}")
+        Log.d(TAG, "hasRightAngles: tr x>tl.x=${tr.x > tl.x} tr.y<br.y=${tr.y < br.y}")
+        Log.d(TAG, "hasRightAngles: bl x<br.x=${bl.x < br.x} bl.y>tl.y=${bl.y > tl.y}")
+        Log.d(TAG, "hasRightAngles: br x>bl.x=${br.x > bl.x} br.y>tr.y=${br.y > tr.y}")
+
+        val corners = listOf(
+            Triple(tr, tl, bl), // angle at TL — arms go to TR and BL
+            Triple(tl, tr, br), // angle at TR — arms go to TL and BR
+            Triple(tl, bl, br), // angle at BL — arms go to TL and BR
+            Triple(bl, br, tr)  // angle at BR — arms go to BL and TR
+        )
+
+        return corners.all { (a, vertex, c) ->
+            val angle = angleDegrees(a, vertex, c)
+            Log.d(TAG, "hasRightAngles: ${vertex} angle: $angle")
+            kotlin.math.abs(angle - 90f) <= toleranceDegrees
+        }
+    }
+
+    private fun angleDegrees(a: PointF, vertex: PointF, c: PointF): Float {
+        val v1x = a.x - vertex.x
+        val v1y = a.y - vertex.y
+        val v2x = c.x - vertex.x
+        val v2y = c.y - vertex.y
+
+        val dot = v1x * v2x + v1y * v2y
+        val mag1 = Math.sqrt((v1x * v1x + v1y * v1y).toDouble()).toFloat()
+        val mag2 = Math.sqrt((v2x * v2x + v2y * v2y).toDouble()).toFloat()
+
+        if (mag1 == 0f || mag2 == 0f) return 0f
+
+        val cosAngle = (dot / (mag1 * mag2)).coerceIn(-1f, 1f)
+        return Math.toDegrees(Math.acos(cosAngle.toDouble())).toFloat()
     }
 }
