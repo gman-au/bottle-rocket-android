@@ -27,6 +27,18 @@
             android:textAlignment="center"
             android:textSize="10pt" />
 
+        <TextView
+            android:id="@+id/textVendor"
+            style="@style/Theme.BottleRocket.TextView.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:layout_marginHorizontal="32dp"
+            android:layout_marginTop="0dp"
+            android:text="@string/image_preview"
+            android:textAlignment="center"
+            android:textSize="6pt" />
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"

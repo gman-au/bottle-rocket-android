@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -29,6 +30,7 @@ class PreviewActivity : AppCompatActivity() {
     private lateinit var sendButton: ImageButton
     private lateinit var cancelButton: ImageButton
     private lateinit var progressBar: ProgressBar
+    private lateinit var vendorText: TextView
 
     companion object {
         private const val TAG = "PreviewActivity"
@@ -49,6 +51,9 @@ class PreviewActivity : AppCompatActivity() {
         sendButton = findViewById(R.id.sendButton)
         imagePreview = findViewById(R.id.previewView)
         progressBar = findViewById(R.id.progressBar)
+        vendorText = findViewById(R.id.textVendor)
+
+        vendorText.text = vendor
 
         sendButton
             .setOnClickListener {
