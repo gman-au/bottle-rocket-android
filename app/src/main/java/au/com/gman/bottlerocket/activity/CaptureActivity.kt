@@ -211,6 +211,7 @@ class CaptureActivity : AppCompatActivity() {
                     intent.putExtra("imagePath", uri);
                     intent.putExtra("qrCode", lastCaptureDetectionResult.qrCode)
                     intent.putExtra("qrBoundingBox", lastEnhancedQrBoundingBox?.toApiString())
+                    intent.putExtra("vendor", lastCaptureDetectionResult.vendor)
                     activityLauncher.launch(intent);
                     steadyFrameIndicator.setProcessing(false)
                 }

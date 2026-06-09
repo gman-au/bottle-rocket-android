@@ -9,6 +9,8 @@ import au.com.gman.bottlerocket.domain.IndicatorBox
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
 import au.com.gman.bottlerocket.domain.ScaleAndOffset
 import au.com.gman.bottlerocket.extensions.aggressiveSmooth
+import au.com.gman.bottlerocket.extensions.createFallbackSquare
+import au.com.gman.bottlerocket.extensions.orderBoxesClockwise
 import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.extensions.toMat
@@ -22,7 +24,7 @@ import javax.inject.Inject
 
 class ScribzeeDetector @Inject constructor(
     private val edgeDetector: IEdgeDetector,
-    private val scribzeeMarkerDetector : IScribzeeMarkerDetector,
+    private val scribzeeMarkerDetector: IScribzeeMarkerDetector,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val screenDimensions: IScreenDimensions,
 ) : ICaptureArtifactDetector {
@@ -109,12 +111,18 @@ class ScribzeeDetector @Inject constructor(
             if (scribzeeMarkers.size == 4) {
                 Log.d(TAG, "Markers found: $scribzeeMarkers")
 
-                val orderedPoints = (
-                        scribzeeMarkers.map { PointF(it.topLeft.x, it.topLeft.y) }
-                        ).orderPointsClockwise()
+                val orderedMarkers =
+                    scribzeeMarkers
+                        .orderBoxesClockwise()
 
                 // Camera space (Mat coordinates)
-                pageBoundingBoxCamera = RocketBoundingBox(orderedPoints)
+                pageBoundingBoxCamera =
+                    RocketBoundingBox(
+                        orderedMarkers[0].bottomRight.x, orderedMarkers[0].bottomRight.y,
+                        orderedMarkers[1].bottomLeft.x, orderedMarkers[1].bottomLeft.y,
+                        orderedMarkers[2].topLeft.x, orderedMarkers[2].topLeft.y,
+                        orderedMarkers[3].topRight.x, orderedMarkers[3].topRight.y
+                    )
 
                 // Preview space (scaled for display)
                 pageBoundingBoxPreview =
@@ -145,13 +153,17 @@ class ScribzeeDetector @Inject constructor(
                 matchFound = true
                 codeFound = true
                 outOfBounds = false
-                //pageBoundingBoxPreview = targetSize.createFallbackSquare()
+
                 previousPageBounds = null
                 rocketBoundingBoxMedianFilter.reset()
             } else {
                 previousPageBounds = null
                 claimed = false
                 rocketBoundingBoxMedianFilter.reset()
+                if (scribzeeMarkers.isNotEmpty()) {
+                    outOfBounds = true
+                    pageBoundingBoxPreview = targetSize.createFallbackSquare()
+                }
             }
 
             return CaptureDetectionResult(

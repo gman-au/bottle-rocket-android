@@ -43,6 +43,7 @@ class PreviewActivity : AppCompatActivity() {
         val imageUri = intent.getParcelableExtra<Uri>("imagePath")
         val qrCode = intent.getStringExtra("qrCode") ?: ""
         val qrBoundingBox = intent.getStringExtra("qrBoundingBox") ?: ""
+        val vendor = intent.getStringExtra("vendor") ?: ""
 
         cancelButton = findViewById(R.id.cancelButton)
         sendButton = findViewById(R.id.sendButton)
@@ -57,7 +58,8 @@ class PreviewActivity : AppCompatActivity() {
                     uploadImage(
                         uri,
                         qrCode,
-                        qrBoundingBox
+                        qrBoundingBox,
+                        vendor
                     )
                 } ?: run {
                     Toast.makeText(this, "No image to upload", Toast.LENGTH_SHORT).show()
@@ -106,13 +108,14 @@ class PreviewActivity : AppCompatActivity() {
             })
     }
 
-    private fun uploadImage(uri: Uri, qrCode: String, qrBoundingBox: String) {
+    private fun uploadImage(uri: Uri, qrCode: String, qrBoundingBox: String, vendor: String) {
         lifecycleScope.launch {
             apiService
                 .uploadCapture(
                     uri,
                     qrCode,
                     qrBoundingBox,
+                    vendor,
                     cacheDir,
                     contentResolver
                 )
