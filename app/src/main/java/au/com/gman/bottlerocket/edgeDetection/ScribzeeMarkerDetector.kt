@@ -11,11 +11,12 @@ import javax.inject.Inject
 class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
 
     companion object {
-        private const val TAG = "ScribzeeMarkerDetector"
         private const val SQUARENESS_THRESHOLD = 0.70
         private const val AREA_MIN_RATIO = 0.00001
         private const val AREA_MAX_RATIO = 0.005
         private const val APPROX_POLY_EPSILON = 0.04
+        private const val CHILD_AREA_RATIO_MIN = 0.10
+        private const val CHILD_AREA_RATIO_MAX = 0.60
         private val BLOCK_SIZES = listOf(7, 15, 31)
         private val SCALES = listOf(1.0, 0.5)
     }
@@ -32,7 +33,6 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
 
         val allCandidates = mutableListOf<ScoredCandidate>()
 
-        // Multi-scale passes
         for (scale in SCALES) {
             val scaledGray = Mat()
             if (scale != 1.0) {
@@ -47,7 +47,6 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
             val scaledW = (imageWidth * scale).toInt()
             val scaledH = (imageHeight * scale).toInt()
 
-            // Multi-block-size passes
             for (blockSize in BLOCK_SIZES) {
                 val thresh = Mat()
                 Imgproc.adaptiveThreshold(
@@ -56,9 +55,7 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
                     Imgproc.THRESH_BINARY_INV,
                     blockSize, 3.0
                 )
-
-                val candidates = detectCandidates(thresh, scaledW, scaledH, scale)
-                allCandidates += candidates
+                allCandidates += detectCandidates(thresh, scaledW, scaledH, scale)
             }
         }
 
@@ -72,15 +69,12 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
 
         val filtered = allCandidates.filter { it.area >= medianArea * 0.4 }
 
-        // Deduplicate by quadrant — keep largest area candidate per quadrant
-        val byQuadrant = filtered
-            .groupBy { classifyQuadrant(it.center, imageWidth, imageHeight) }
+        // Deduplicate by corner, keep largest per quadrant
+        return filtered
+            .groupBy { classifyCorner(it.center, imageWidth, imageHeight) }
             .mapValues { (_, group) -> group.maxByOrNull { it.area }!! }
-
-        // Build one RocketBoundingBox per detected marker
-        return byQuadrant.values.map { candidate ->
-            RocketBoundingBox(candidate.boundingRect)
-        }
+            .values
+            .map { RocketBoundingBox(it.boundingRect) }
     }
 
     // ------------------------------------------------------------------
@@ -119,19 +113,30 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
             val childIdx = hierarchy.get(0, i)[2].toInt()
             if (childIdx < 0) return@forEachIndexed
 
-            // Must approximate to a quadrilateral
+            // Inner notch must be proportionally square and correctly sized
+            val childContour = contours[childIdx]
+            val childArea = Imgproc.contourArea(childContour)
+            val childRect = Imgproc.boundingRect(childContour)
+
+            val areaRatio = childArea / area
+            if (areaRatio !in CHILD_AREA_RATIO_MIN..CHILD_AREA_RATIO_MAX) return@forEachIndexed
+
+            val childSquareness = minOf(childRect.width, childRect.height).toDouble() /
+                    maxOf(childRect.width, childRect.height).toDouble()
+            if (childSquareness < SQUARENESS_THRESHOLD) return@forEachIndexed
+
+            // Outer contour must approximate to a quadrilateral
             val contour2f = MatOfPoint2f(*contour.toArray())
             val approx = MatOfPoint2f()
             val peri = Imgproc.arcLength(contour2f, true)
             Imgproc.approxPolyDP(contour2f, approx, APPROX_POLY_EPSILON * peri, true)
             if (approx.rows() != 4) return@forEachIndexed
 
-            // Centroid
+            // Centroid scaled back to original image coordinates
             val moments = Imgproc.moments(contour)
             val cx = (moments.m10 / moments.m00) / scale
             val cy = (moments.m01 / moments.m00) / scale
 
-            // Scale bounding rect back to original image coordinates
             val scaledRect = org.opencv.core.Rect(
                 (rect.x / scale).toInt(),
                 (rect.y / scale).toInt(),
@@ -160,7 +165,7 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
         return (imageArea * AREA_MIN_RATIO)..(imageArea * AREA_MAX_RATIO)
     }
 
-    private fun classifyQuadrant(
+    private fun classifyCorner(
         center: PointF,
         imageWidth: Int,
         imageHeight: Int
@@ -182,6 +187,6 @@ class ScribzeeMarkerDetector @Inject constructor() : IScribzeeMarkerDetector {
     private data class ScoredCandidate(
         val center: PointF,
         val area: Double,
-        val boundingRect: org.opencv.core.Rect
+        val boundingRect: Rect
     )
 }
