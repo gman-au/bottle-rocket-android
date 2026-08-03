@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -39,6 +40,8 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
     private lateinit var emptyText: TextView
     private lateinit var adapter: ResultsAdapter
 
+    private lateinit var loadingOverlay: FrameLayout
+
     companion object {
         private const val TAG = "ConfirmWorkflowActivity"
     }
@@ -57,6 +60,7 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         cancelButton = findViewById(R.id.cancelButton)
         sendButton = findViewById(R.id.sendButton)
         progressBar = findViewById(R.id.progressBar)
+        loadingOverlay = findViewById(R.id.loadingOverlay)
 
         sendButton
             .setOnClickListener {
@@ -138,7 +142,7 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
     }
 
     private fun setLoadingState(isLoading: Boolean) {
-        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        loadingOverlay.visibility = if (isLoading) View.VISIBLE else View.GONE
         cancelButton.isEnabled = !isLoading
         sendButton.isEnabled = !isLoading
     }
