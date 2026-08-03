@@ -13,7 +13,7 @@ import au.com.gman.bottlerocket.extensions.orderPointsClockwise
 import au.com.gman.bottlerocket.extensions.scaleUpWithOffset
 import au.com.gman.bottlerocket.interfaces.IEdgeDetector
 import au.com.gman.bottlerocket.interfaces.IQrCodeHandler
-import au.com.gman.bottlerocket.interfaces.IQrCodeTemplateMatcher
+import au.com.gman.bottlerocket.interfaces.IRocketbookQrCodeTemplateMatcher
 import au.com.gman.bottlerocket.interfaces.IQrPositionalValidator
 import au.com.gman.bottlerocket.interfaces.IRocketBoundingBoxMedianFilter
 import au.com.gman.bottlerocket.interfaces.IScreenDimensions
@@ -23,7 +23,7 @@ import javax.inject.Inject
 
 class QrCodeHandler @Inject constructor(
     private val screenDimensions: IScreenDimensions,
-    private val qrCodeTemplateMatcher: IQrCodeTemplateMatcher,
+    private val rocketbookQrCodeTemplateMatcher: IRocketbookQrCodeTemplateMatcher,
     private val rocketBoundingBoxMedianFilter: IRocketBoundingBoxMedianFilter,
     private val qrPositionalValidator: IQrPositionalValidator,
     private val edgeDetector: IEdgeDetector
@@ -54,7 +54,7 @@ class QrCodeHandler @Inject constructor(
         var cameraRotation: Float = 0F
         var scalingFactor: ScaleAndOffset? = null
 
-        val pageTemplate = qrCodeTemplateMatcher.tryMatch(barcode?.rawValue ?: "")
+        val pageTemplate = rocketbookQrCodeTemplateMatcher.tryMatch(barcode?.rawValue ?: "")
 
         val qrBoundingBoxList: MutableList<RocketBoundingBox?> = mutableListOf()
         val qrIndicatorBoxes: MutableList<RocketBoundingBox?> = mutableListOf()
