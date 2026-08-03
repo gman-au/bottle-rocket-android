@@ -1,6 +1,7 @@
 package au.com.gman.bottlerocket.activity
 
 import ResultsAdapter
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -109,6 +110,8 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                     Log.d(TAG, "Upload success - Code: ${response.errorCode}")
+
+                    returnToCapture()
                 }
 
                 override fun onApiResponseFailure(response: IApiResponse) {
@@ -160,5 +163,13 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
             emptyText.visibility = View.GONE
             adapter.submitList(results)
         }
+    }
+
+    private fun returnToCapture() {
+        val intent = Intent(this, CaptureActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        startActivity(intent)
+        finish()
     }
 }
