@@ -1,0 +1,12 @@
+<!-- res/layout/item_result.xml -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/resultTitle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:padding="16dp"
+    style="@style/Theme.BottleRocket.TextView"
+    android:background="@drawable/bg_result_selector"
+    android:foreground="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true" />

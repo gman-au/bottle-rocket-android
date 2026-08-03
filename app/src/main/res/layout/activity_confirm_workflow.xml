@@ -23,36 +23,53 @@
             android:layout_gravity="center"
             android:layout_marginHorizontal="32dp"
             android:layout_marginTop="32dp"
-            android:text="@string/image_preview"
+            android:text="@string/confirm_workflow"
             android:textAlignment="center"
             android:textSize="10pt" />
 
         <TextView
-            android:id="@+id/textVendor"
-            style="@style/Theme.BottleRocket.TextView.Primary"
+            android:id="@+id/infoText"
             android:layout_width="match_parent"
-            android:layout_height="18dp"
-            android:layout_gravity="center"
-            android:layout_marginHorizontal="32dp"
-            android:layout_marginTop="0dp"
-            android:text="@string/image_preview"
-            android:textAlignment="center"
-            android:textSize="6pt" />
+            android:layout_height="wrap_content"
+            android:text="@string/info_workflows"
+            android:textSize="16sp"
+            android:gravity="center"
+            style="@style/Theme.BottleRocket.TextView"
+            app:layout_constraintTop_toBottomOf="@id/titleText"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="16dp" />
 
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginHorizontal="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:layout_marginHorizontal="0dp">
 
-            <ImageView
-                android:id="@+id/previewView"
-                style="@style/Theme.BottleRocket.BorderedImageView"
+            <ProgressBar
+                android:id="@+id/progressBar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:adjustViewBounds="true"
-                android:scaleType="fitCenter" />
+                android:layout_marginBottom="16dp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/emptyText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textSize="16sp"
+                android:gravity="center"
+                style="@style/Theme.BottleRocket.Text.Warning"
+                android:text="@string/no_workflows_found"
+                android:visibility="visible" />
 
         </FrameLayout>
 
@@ -83,7 +100,7 @@
                 android:layout_weight="1"
                 android:contentDescription="@string/option_send"
                 android:enabled="true"
-                app:srcCompat="@drawable/baseline_arrow_forward_ios_new_24"
+                app:srcCompat="@drawable/baseline_send_24"
                 app:tint="@color/primary_color_selector" />
 
         </LinearLayout>
