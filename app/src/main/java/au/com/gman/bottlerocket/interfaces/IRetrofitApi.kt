@@ -20,7 +20,8 @@ interface IRetrofitApi {
         @Part image: MultipartBody.Part,
         @Part("qr_code") qrCode: RequestBody,
         @Part("qr_bounding_box") qrBoundingBox: RequestBody,
-        @Part("vendor") vendor: RequestBody
+        @Part("vendor") vendor: RequestBody,
+        @Part workflows: List<MultipartBody.Part>
     ): Response<ProcessCaptureResponse>
 
     @POST("/api/connection")

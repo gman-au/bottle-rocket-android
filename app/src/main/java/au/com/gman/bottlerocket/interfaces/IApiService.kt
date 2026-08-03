@@ -13,6 +13,7 @@ interface IApiService {
         qrCode: String,
         qrBoundingBox: String,
         vendor: String,
+        workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
     )

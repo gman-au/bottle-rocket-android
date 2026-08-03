@@ -67,7 +67,8 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                         uri,
                         qrCode,
                         qrBoundingBox,
-                        vendor
+                        vendor,
+                        adapter.getSelectedIds()
                     )
                 } ?: run {
                     Toast.makeText(this, "No image to upload", Toast.LENGTH_SHORT).show()
@@ -121,7 +122,7 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
             })
     }
 
-    private fun uploadImage(uri: Uri, qrCode: String, qrBoundingBox: String, vendor: String) {
+    private fun uploadImage(uri: Uri, qrCode: String, qrBoundingBox: String, vendor: String, workflows: Set<String>) {
         lifecycleScope.launch {
             apiService
                 .uploadCapture(
@@ -129,6 +130,7 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                     qrCode,
                     qrBoundingBox,
                     vendor,
+                    workflows,
                     cacheDir,
                     contentResolver
                 )
@@ -154,10 +156,5 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
             emptyText.visibility = View.GONE
             adapter.submitList(results)
         }
-    }
-
-    private fun onResultClicked(result: WorkflowSummary) {
-        // handle tap — navigate, show detail, etc.
-        Log.d(TAG, "result: ${result.workflowId}, ${result.workflowName}")
     }
 }

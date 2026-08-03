@@ -132,6 +132,7 @@ class ApiService @Inject constructor(
         qrCode: String,
         qrBoundingBox: String,
         vendor: String,
+        workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
     ) {
@@ -164,6 +165,10 @@ class ApiService @Inject constructor(
                     qrBoundingBox.toRequestBody("text/plain".toMediaTypeOrNull())
                 val vendor = vendor.toRequestBody("text/plain".toMediaTypeOrNull())
 
+                val workflowParts = workflows.map { id ->
+                    MultipartBody.Part.createFormData("workflows", id)
+                }
+
                 // Make actual API call
                 val httpResponse =
                     retrofitApi
@@ -171,7 +176,8 @@ class ApiService @Inject constructor(
                             imagePart,
                             qrCodePart,
                             qrBoundingBoxPart,
-                            vendor
+                            vendor,
+                            workflowParts
                         )
 
                 // Delete temp file
