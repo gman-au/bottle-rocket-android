@@ -2,10 +2,12 @@ package au.com.gman.bottlerocket.interfaces
 
 import au.com.gman.bottlerocket.contracts.ConnectionTestResponse
 import au.com.gman.bottlerocket.contracts.FetchPageTemplatesResponse
+import au.com.gman.bottlerocket.contracts.FetchWorkflowsResponse
 import au.com.gman.bottlerocket.contracts.ProcessCaptureResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -28,4 +30,10 @@ interface IRetrofitApi {
     @GET("/api/pageTemplates")
     suspend fun apiFetchPageTemplates()
             : Response<FetchPageTemplatesResponse>
+
+    @POST("/api/workflows/fetch")
+    suspend fun apiFetchWorkflows(
+        @Body body: RequestBody
+    )
+            : Response<FetchWorkflowsResponse>
 }

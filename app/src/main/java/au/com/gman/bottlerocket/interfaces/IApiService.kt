@@ -18,6 +18,4 @@ interface IApiService {
     )
 
     fun setListener(listener: IApiResponseListener)
-
-    fun downloadTemplates()
 }
