@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.recyclerview)
     testImplementation(libs.junit)
     testImplementation("org.robolectric:robolectric:4.11.1")
     androidTestImplementation(libs.androidx.junit)

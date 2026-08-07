@@ -62,6 +62,14 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".activity.ConfirmWorkflowActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BottleRocket">
+            <intent-filter>
+                <action android:name="android.intent.action.CONFIRM_WORKFLOW" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".activity.SettingsActivity"
             android:exported="true"
             android:theme="@style/Theme.BottleRocket">

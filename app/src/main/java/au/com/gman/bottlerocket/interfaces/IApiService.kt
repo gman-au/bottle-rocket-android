@@ -13,11 +13,10 @@ interface IApiService {
         qrCode: String,
         qrBoundingBox: String,
         vendor: String,
+        workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
     )
 
     fun setListener(listener: IApiResponseListener)
-
-    fun downloadTemplates()
 }

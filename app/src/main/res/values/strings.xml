@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Bottle Rocket</string>
     <string name="image_preview">Preview image</string>
+    <string name="confirm_workflow">Confirm</string>
     <string name="option_begin_capture">Begin capture</string>
     <string name="option_settings">Settings</string>
     <string name="option_exit">Exit</string>
@@ -18,12 +19,14 @@
     <string name="password">Password</string>
     <string name="bottle_rocket_logo">Bottle Rocket logo</string>
     <string name="title_activity_splash">SplashActivity</string>
-    <string name="loading_templates">Loading templates…</string>
+    <string name="loading_templates">Loading data from server…</string>
     <string name="continue_to_main">Continue</string>
-    <string name="warning_server">Warning - could not connect to Bottle Rocket server. \nPlease verify your Bottle Rocket server in order to detect QR code pages.</string>
+    <string name="warning_server">Warning - could not connect to Bottle Rocket server. \nPlease verify your Bottle Rocket server in order upload scanned images.</string>
     <string name="retry">Retry</string>
     <string name="scan_qr_code">Scan Login QR Code</string>
     <string name="settings_updated">Settings Updated</string>
     <string name="warning_restart">Your server settings have been saved.\n\nPlease restart the app to connect to the new server and download the page templates.</string>
     <string name="close_app">Close</string>
+    <string name="info_workflows">This image will be sent to your Bottle Rocket server.\nYou can also tell it to run one or more workflows that you have configured.\nClick the Send button below to confirm.</string>
+    <string name="no_workflows_found">No workflows found on your server. This scan will be uploaded without any further processing.</string>
 </resources>

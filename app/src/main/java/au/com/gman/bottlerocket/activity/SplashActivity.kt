@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import au.com.gman.bottlerocket.R
-import au.com.gman.bottlerocket.qrCode.QrTemplateCache
+import au.com.gman.bottlerocket.interfaces.IWorkflowCache
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -14,7 +14,7 @@ import javax.inject.Inject
 class SplashActivity : AppCompatActivity() {
 
     @Inject
-    lateinit var templateCache: QrTemplateCache
+    lateinit var workflowCache: IWorkflowCache
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super
@@ -22,12 +22,12 @@ class SplashActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_splash)
 
-        loadTemplatesAndProceed()
+        loadCachesAndProceed()
     }
 
-    private fun loadTemplatesAndProceed() {
+    private fun loadCachesAndProceed() {
         lifecycleScope.launch {
-            val result = templateCache.loadTemplates()
+            val result = workflowCache.loadWorkflows()
 
             result.fold(
                 onSuccess = { templates ->
