@@ -43,6 +43,8 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
 
     private lateinit var loadingOverlay: FrameLayout
 
+    private var isSharedFlow = false
+
     companion object {
         private const val TAG = "ConfirmWorkflowActivity"
     }
@@ -57,6 +59,7 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         val qrCode = intent.getStringExtra("qrCode") ?: ""
         val qrBoundingBox = intent.getStringExtra("qrBoundingBox") ?: ""
         val vendor = intent.getStringExtra("vendor") ?: ""
+        isSharedFlow = intent.getBooleanExtra("isSharedFlow", false)
 
         cancelButton = findViewById(R.id.cancelButton)
         sendButton = findViewById(R.id.sendButton)
@@ -111,7 +114,11 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                     ).show()
                     Log.d(TAG, "Upload success - Code: ${response.errorCode}")
 
-                    returnToCapture()
+                    if (isSharedFlow) {
+                        finishAffinity()
+                    } else {
+                        returnToCapture()
+                    }
                 }
 
                 override fun onApiResponseFailure(response: IApiResponse) {

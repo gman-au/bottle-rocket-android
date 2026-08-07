@@ -1,6 +1,7 @@
 package au.com.gman.bottlerocket.activity
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
@@ -15,19 +16,35 @@ class ServerWarningActivity : AppCompatActivity() {
     @Inject
     lateinit var templateCache: QrTemplateCache
 
+    private var isSharedFlow = false
+    private var sharedImageUri: Uri? = null
+    private var sharedVendor: String = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_server_warning)
+
+        isSharedFlow = intent.getBooleanExtra("isSharedFlow", false)
+        sharedImageUri = intent.getParcelableExtra("imagePath")
+        sharedVendor = intent.getStringExtra("vendor") ?: ""
 
         val retryButton = findViewById<Button>(R.id.retryButton)
         val continueButton = findViewById<Button>(R.id.continueButton)
         val settingsButton = findViewById<Button>(R.id.settingsButton)
 
         retryButton.setOnClickListener {
-            val intent = Intent(this, SplashActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
+            if (isSharedFlow && sharedImageUri != null) {
+                val intent = Intent(this, PreviewActivity::class.java)
+                intent.putExtra("imagePath", sharedImageUri)
+                intent.putExtra("vendor", sharedVendor)
+                intent.putExtra("isSharedFlow", true)
+                startActivity(intent)
+            } else {
+                val intent = Intent(this, SplashActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+            }
             finish()
         }
 
@@ -39,12 +56,10 @@ class ServerWarningActivity : AppCompatActivity() {
         }
 
         settingsButton.setOnClickListener {
-            // First navigate to MainActivity to establish it in the back stack
             val mainIntent = Intent(this, MainActivity::class.java)
             mainIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(mainIntent)
 
-            // Then open Settings on top of MainActivity
             val settingsIntent = Intent(this, SettingsActivity::class.java)
             startActivity(settingsIntent)
 
