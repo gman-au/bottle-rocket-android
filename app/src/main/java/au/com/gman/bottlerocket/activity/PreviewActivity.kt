@@ -69,11 +69,9 @@ class PreviewActivity : AppCompatActivity() {
     /** Normal flow: CaptureActivity already ran, workflows were loaded back in SplashActivity. */
     private fun handleCapturedImage() {
         val imageUri = intent.getParcelableExtra<Uri>("imagePath")
-        val qrCode = intent.getStringExtra("qrCode") ?: ""
-        val qrBoundingBox = intent.getStringExtra("qrBoundingBox") ?: ""
         val vendor = intent.getStringExtra("vendor") ?: ""
 
-        setupPreview(imageUri, qrCode, qrBoundingBox, vendor, isSharedFlow = false)
+        setupPreview(imageUri, vendor, isSharedFlow = false)
     }
 
     /** Share flow: no CaptureActivity, no prior workflow fetch — do it now. */
@@ -112,7 +110,7 @@ class PreviewActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupPreview(imageUri: Uri?, qrCode: String, qrBoundingBox: String, vendor: String, isSharedFlow: Boolean) {
+    private fun setupPreview(imageUri: Uri?, vendor: String, isSharedFlow: Boolean) {
         vendorText.text = vendor
 
         sendButton.setOnClickListener {
@@ -120,8 +118,6 @@ class PreviewActivity : AppCompatActivity() {
             imageUri?.let { uri ->
                 val confirmIntent = Intent(this, ConfirmWorkflowActivity::class.java)
                 confirmIntent.putExtra("imagePath", uri)
-                confirmIntent.putExtra("qrCode", qrCode)
-                confirmIntent.putExtra("qrBoundingBox", qrBoundingBox)
                 confirmIntent.putExtra("vendor", vendor)
                 confirmIntent.putExtra("isSharedFlow", isSharedFlow)
                 activityLauncher.launch(confirmIntent)
@@ -170,7 +166,7 @@ class PreviewActivity : AppCompatActivity() {
 
     private fun proceedWithSharedImage(imageUri: Uri, vendor: String) {
         if (workflowCache.isWorkflowsLoaded()) {
-            setupPreview(imageUri, qrCode = "", qrBoundingBox = "", vendor = vendor, isSharedFlow = true)
+            setupPreview(imageUri, vendor = vendor, isSharedFlow = true)
             return
         }
 
@@ -182,7 +178,7 @@ class PreviewActivity : AppCompatActivity() {
             result.fold(
                 onSuccess = {
                     setLoading(false)
-                    setupPreview(imageUri, qrCode = "", qrBoundingBox = "", vendor = vendor, isSharedFlow = true)
+                    setupPreview(imageUri, vendor = vendor, isSharedFlow = true)
                 },
                 onFailure = { error ->
                     Log.e(TAG, "Failed to load workflows for shared image", error)

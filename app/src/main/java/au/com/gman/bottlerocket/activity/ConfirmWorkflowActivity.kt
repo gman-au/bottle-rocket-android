@@ -56,8 +56,6 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         setContentView(R.layout.activity_confirm_workflow)
 
         val imageUri = intent.getParcelableExtra<Uri>("imagePath")
-        val qrCode = intent.getStringExtra("qrCode") ?: ""
-        val qrBoundingBox = intent.getStringExtra("qrBoundingBox") ?: ""
         val vendor = intent.getStringExtra("vendor") ?: ""
         isSharedFlow = intent.getBooleanExtra("isSharedFlow", false)
 
@@ -73,8 +71,6 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                 imageUri?.let { uri ->
                     uploadImage(
                         uri,
-                        qrCode,
-                        qrBoundingBox,
                         vendor,
                         adapter.getSelectedIds()
                     )
@@ -136,13 +132,11 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
             })
     }
 
-    private fun uploadImage(uri: Uri, qrCode: String, qrBoundingBox: String, vendor: String, workflows: Set<String>) {
+    private fun uploadImage(uri: Uri, vendor: String, workflows: Set<String>) {
         lifecycleScope.launch {
             apiService
                 .uploadCapture(
                     uri,
-                    qrCode,
-                    qrBoundingBox,
                     vendor,
                     workflows,
                     cacheDir,

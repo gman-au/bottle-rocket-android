@@ -184,7 +184,6 @@ class ScribzeeDetector @Inject constructor(
                 matchFound = matchFound,
                 outOfBounds = outOfBounds,
                 qrCode = qrCodeValue,
-                pageTemplate = null,
                 pageOverlayPath = pageBoundingBoxCamera,
                 feedbackOverlayPaths = qrBoundingBoxList,
                 pageOverlayPathPreview = pageBoundingBoxPreview,
