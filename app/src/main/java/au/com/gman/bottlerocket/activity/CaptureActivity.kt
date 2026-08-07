@@ -210,8 +210,6 @@ class CaptureActivity : AppCompatActivity() {
                 override fun onFileSaveSuccess(uri: Uri) {
                     val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
                     intent.putExtra("imagePath", uri);
-                    intent.putExtra("qrCode", lastCaptureDetectionResult.qrCode)
-                    intent.putExtra("qrBoundingBox", lastEnhancedQrBoundingBox?.toApiString())
                     intent.putExtra("vendor", lastCaptureDetectionResult.vendor)
                     activityLauncher.launch(intent);
                     steadyFrameIndicator.setProcessing(false)

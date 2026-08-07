@@ -191,7 +191,6 @@ class QrCodeHandler @Inject constructor(
             matchFound = matchFound,
             outOfBounds = outOfBounds,
             qrCode = qrCodeValue,
-            pageTemplate = pageTemplate,
             pageOverlayPath = pageBoundingBoxCamera,
             feedbackOverlayPaths = qrBoundingBoxList,
             pageOverlayPathPreview = pageBoundingBoxPreview,

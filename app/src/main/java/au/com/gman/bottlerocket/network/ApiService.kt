@@ -129,8 +129,6 @@ class ApiService @Inject constructor(
 
     override fun uploadCapture(
         imageUri: Uri,
-        qrCode: String,
-        qrBoundingBox: String,
         vendor: String,
         workflows: Set<String>,
         cacheDir: File,
@@ -160,9 +158,6 @@ class ApiService @Inject constructor(
                             requestFile
                         )
 
-                val qrCodePart = qrCode.toRequestBody("text/plain".toMediaTypeOrNull())
-                val qrBoundingBoxPart =
-                    qrBoundingBox.toRequestBody("text/plain".toMediaTypeOrNull())
                 val vendor = vendor.toRequestBody("text/plain".toMediaTypeOrNull())
 
                 val workflowParts = workflows.map { id ->
@@ -174,8 +169,6 @@ class ApiService @Inject constructor(
                     retrofitApi
                         .apiCaptureProcess(
                             imagePart,
-                            qrCodePart,
-                            qrBoundingBoxPart,
                             vendor,
                             workflowParts
                         )

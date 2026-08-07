@@ -18,8 +18,6 @@ interface IRetrofitApi {
     @POST("/api/capture/process")
     suspend fun apiCaptureProcess(
         @Part image: MultipartBody.Part,
-        @Part("qr_code") qrCode: RequestBody,
-        @Part("qr_bounding_box") qrBoundingBox: RequestBody,
         @Part("vendor") vendor: RequestBody,
         @Part workflows: List<MultipartBody.Part>
     ): Response<ProcessCaptureResponse>

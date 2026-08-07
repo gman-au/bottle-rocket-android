@@ -43,6 +43,8 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
 
     private lateinit var loadingOverlay: FrameLayout
 
+    private var isSharedFlow = false
+
     companion object {
         private const val TAG = "ConfirmWorkflowActivity"
     }
@@ -54,9 +56,8 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         setContentView(R.layout.activity_confirm_workflow)
 
         val imageUri = intent.getParcelableExtra<Uri>("imagePath")
-        val qrCode = intent.getStringExtra("qrCode") ?: ""
-        val qrBoundingBox = intent.getStringExtra("qrBoundingBox") ?: ""
         val vendor = intent.getStringExtra("vendor") ?: ""
+        isSharedFlow = intent.getBooleanExtra("isSharedFlow", false)
 
         cancelButton = findViewById(R.id.cancelButton)
         sendButton = findViewById(R.id.sendButton)
@@ -70,8 +71,6 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                 imageUri?.let { uri ->
                     uploadImage(
                         uri,
-                        qrCode,
-                        qrBoundingBox,
                         vendor,
                         adapter.getSelectedIds()
                     )
@@ -111,7 +110,11 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
                     ).show()
                     Log.d(TAG, "Upload success - Code: ${response.errorCode}")
 
-                    returnToCapture()
+                    if (isSharedFlow) {
+                        finishAffinity()
+                    } else {
+                        returnToCapture()
+                    }
                 }
 
                 override fun onApiResponseFailure(response: IApiResponse) {
@@ -129,13 +132,11 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
             })
     }
 
-    private fun uploadImage(uri: Uri, qrCode: String, qrBoundingBox: String, vendor: String, workflows: Set<String>) {
+    private fun uploadImage(uri: Uri, vendor: String, workflows: Set<String>) {
         lifecycleScope.launch {
             apiService
                 .uploadCapture(
                     uri,
-                    qrCode,
-                    qrBoundingBox,
                     vendor,
                     workflows,
                     cacheDir,
