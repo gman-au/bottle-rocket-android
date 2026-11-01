@@ -85,7 +85,7 @@ class SettingsActivity : AppCompatActivity() {
         usernameInput.setText(appSettings.username)
 
         // password is deliberately not restored: it is never stored
-        passwordInput.hint = "Password (used to sign in, not stored)"
+        updatePasswordHint()
 
         cancelButton
             .setOnClickListener {
@@ -99,28 +99,22 @@ class SettingsActivity : AppCompatActivity() {
 
         testConnectionButton
             .setOnClickListener {
+                var url = urlInput.text.toString().trim()
+
+                if (url.isEmpty()) {
+                    Toast.makeText(this, "URL cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (!url.endsWith("/")) url += "/"
+
                 setLoadingState(true)
 
-                val username =
-                    usernameInput
-                        .text
-                        .toString()
-                        .trim()
-
-                val password =
-                    passwordInput
-                        .text
-                        .toString()
-                        .trim()
-
-                val url =
-                    urlInput
-                        .text
-                        .toString()
-                        .trim()
-
                 apiService
-                    .testConnection(url, username, password)
+                    .testConnection(
+                        url,
+                        usernameInput.text.toString().trim(),
+                        passwordInput.text.toString().trim()
+                    )
             }
 
         saveButton
@@ -217,7 +211,7 @@ class SettingsActivity : AppCompatActivity() {
                     appSettings.resetToDefault()
                     urlInput.setText(appSettings.apiBaseUrl)
                     usernameInput.setText("")
-                    passwordInput.text.clear()
+                    updatePasswordHint()
 
                     setLoadingState(false)
                     Toast.makeText(this@SettingsActivity, "Reset to default", Toast.LENGTH_SHORT)
@@ -265,5 +259,9 @@ class SettingsActivity : AppCompatActivity() {
         saveButton.isEnabled = !isLoading
         resetButton.isEnabled = !isLoading
         urlInput.isEnabled = !isLoading
+    }
+
+    private fun updatePasswordHint() {
+        passwordInput.hint = if (tokenStore.hasSession) "*****" else "Password"
     }
 }

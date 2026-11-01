@@ -42,6 +42,19 @@ class AuthService @Inject constructor(
         }
     }
 
+    override fun logoutAgainst(baseUrl: String, accessToken: String) {
+        try {
+            val request = Request.Builder()
+                .url(baseUrl.trimEnd('/') + "/api/auth/logout")
+                .header("Authorization", "Bearer $accessToken")
+                .post("".toRequestBody(json))
+                .build()
+            client.newCall(request).execute().close()
+        } catch (_: IOException) {
+            // The test session will simply expire on its own
+        }
+    }
+
     override fun signIn(baseUrl: String, username: String, password: String): LoginResponse? {
 
         val body =
