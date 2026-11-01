@@ -29,7 +29,8 @@ import javax.inject.Inject
 
 class ApiService @Inject constructor(
     private val fileIo: IFileIo,
-    private val retrofitApi: IRetrofitApi
+    private val retrofitApi: IRetrofitApi,
+    private val authService: AuthService
 ) : IApiService {
     private var listener: IApiResponseListener? = null
 
@@ -44,47 +45,55 @@ class ApiService @Inject constructor(
 
     override fun testConnection(baseUrl: String, username: String, password: String) {
         CoroutineScope(Dispatchers.IO).launch {
+            var accessToken: String? = null
             try {
+
+                val hasCredentials = username.isNotEmpty() && password.isNotEmpty()
+
+                if (hasCredentials) {
+                    accessToken =
+                        authService
+                            .loginAgainst(baseUrl, username, password)
+
+                    if (accessToken == null) {
+                        withContext(Dispatchers.Main) {
+                            listener?.onApiResponseFailure(
+                                ConnectionTestResponse(
+                                    errorCode = 401,
+                                    errorMessage = "Invalid username or password."
+                                )
+                            )
+                        }
+                        return@launch
+                    }
+                }
+
                 // Create a temporary Retrofit instance with the test URL
                 val loggingInterceptor = HttpLoggingInterceptor().apply {
                     level = HttpLoggingInterceptor.Level.BODY
+                    redactHeader("Authorization")
                 }
 
-                val okHttpClient =
-                    OkHttpClient
-                        .Builder()
-                        .addInterceptor { chain ->
-                            val originalRequest = chain.request()
+                val token = accessToken
+                val okHttpClient = OkHttpClient.Builder()
+                    .addInterceptor { chain ->
+                        val builder = chain.request().newBuilder()
+                        if (token != null) builder.header("Authorization", "Bearer $token")
+                        chain.proceed(builder.build())
+                    }
+                    .addInterceptor(loggingInterceptor)
+                    .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    .build()
 
-                            // Add auth header if credentials provided
-                            val requestBuilder =
-                                if (username.isNotEmpty() && password.isNotEmpty()) {
-                                    val credentials = Credentials.basic(username, password)
-                                    originalRequest.newBuilder()
-                                        .header("Authorization", credentials)
-                                } else {
-                                    originalRequest.newBuilder()
-                                }
-
-                            chain.proceed(requestBuilder.build())
-                        }
-                        .addInterceptor(loggingInterceptor)
-                        .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .build()
-
-                val retrofit = Retrofit.Builder()
+                val api = Retrofit.Builder()
                     .baseUrl(baseUrl)
                     .client(okHttpClient)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build()
+                    .create(IRetrofitApi::class.java)
 
-                val api =
-                    retrofit
-                        .create(IRetrofitApi::class.java)
-
-                // Make the test call
                 val httpResponse =
                     api
                         .apiConnectionTest()
