@@ -3,6 +3,7 @@ package au.com.gman.bottlerocket.injection
 import au.com.gman.bottlerocket.settings.AppSettings
 import au.com.gman.bottlerocket.interfaces.IRetrofitApi
 import au.com.gman.bottlerocket.network.AuthInterceptor
+import au.com.gman.bottlerocket.network.BaseUrlInterceptor
 import au.com.gman.bottlerocket.network.TokenAuthenticator
 import dagger.Module
 import dagger.Provides
@@ -35,6 +36,7 @@ object HttpModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: AuthInterceptor,
+        baseUrlInterceptor: BaseUrlInterceptor,
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -43,6 +45,7 @@ object HttpModule {
         }
 
         return OkHttpClient.Builder()
+            .addInterceptor(baseUrlInterceptor)
             .addInterceptor(authInterceptor)   // must stay before logging, or the logger never sees the header
             .addInterceptor(loggingInterceptor)
             .authenticator(tokenAuthenticator)
@@ -58,7 +61,7 @@ object HttpModule {
         appSettings: AppSettings
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(appSettings.apiBaseUrl)
+            .baseUrl("http://localhost/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

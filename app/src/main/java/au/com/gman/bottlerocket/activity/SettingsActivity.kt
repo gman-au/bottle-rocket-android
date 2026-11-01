@@ -16,6 +16,7 @@ import au.com.gman.bottlerocket.settings.AppSettings
 import au.com.gman.bottlerocket.interfaces.IApiResponse
 import au.com.gman.bottlerocket.interfaces.IApiResponseListener
 import au.com.gman.bottlerocket.interfaces.IApiService
+import au.com.gman.bottlerocket.interfaces.IWorkflowCache
 import au.com.gman.bottlerocket.network.AuthService
 import au.com.gman.bottlerocket.network.TokenStore
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,6 +40,9 @@ class SettingsActivity : AppCompatActivity() {
 
     @Inject
     lateinit var tokenStore: TokenStore
+
+    @Inject
+    lateinit var workflowCache: IWorkflowCache
 
     private lateinit var urlInput: EditText
     private lateinit var usernameInput: EditText
@@ -181,14 +185,23 @@ class SettingsActivity : AppCompatActivity() {
                             .text
                             .clear()
 
-                        val intent =
-                            Intent(this@SettingsActivity, RestartRequiredActivity::class.java)
-
-                        intent.flags =
-                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                        startActivity(intent)
-                        finish()
+                        workflowCache.loadWorkflows().fold(
+                            onSuccess = {
+                                val intent = Intent(this@SettingsActivity, MainActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                startActivity(intent)
+                                finish()
+                            },
+                            onFailure = { error ->
+                                setLoadingState(false)
+                                updatePasswordHint()
+                                Toast.makeText(
+                                    this@SettingsActivity,
+                                    "Signed in, but couldn't load workflows: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        )
                     } catch (e: IOException) {
                         setLoadingState(false)
                         Toast
