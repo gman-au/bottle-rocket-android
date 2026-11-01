@@ -10,11 +10,11 @@ import au.com.gman.bottlerocket.interfaces.IApiResponseListener
 import au.com.gman.bottlerocket.interfaces.IApiService
 import au.com.gman.bottlerocket.interfaces.IFileIo
 import au.com.gman.bottlerocket.interfaces.IRetrofitApi
+import au.com.gman.bottlerocket.settings.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -29,7 +29,10 @@ import javax.inject.Inject
 
 class ApiService @Inject constructor(
     private val fileIo: IFileIo,
-    private val retrofitApi: IRetrofitApi
+    private val retrofitApi: IRetrofitApi,
+    private val authService: AuthService,
+    private val appSettings: AppSettings,
+    private val tokenStore: TokenStore
 ) : IApiService {
     private var listener: IApiResponseListener? = null
 
@@ -44,47 +47,34 @@ class ApiService @Inject constructor(
 
     override fun testConnection(baseUrl: String, username: String, password: String) {
         CoroutineScope(Dispatchers.IO).launch {
+            var accessToken: String? = null
             try {
-                // Create a temporary Retrofit instance with the test URL
-                val loggingInterceptor = HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BODY
-                }
 
-                val okHttpClient =
-                    OkHttpClient
-                        .Builder()
-                        .addInterceptor { chain ->
-                            val originalRequest = chain.request()
+                val sameAsSaved =
+                    baseUrl.trimEnd('/') == appSettings.apiBaseUrl.trimEnd('/') &&
+                            username == appSettings.username
 
-                            // Add auth header if credentials provided
-                            val requestBuilder =
-                                if (username.isNotEmpty() && password.isNotEmpty()) {
-                                    val credentials = Credentials.basic(username, password)
-                                    originalRequest.newBuilder()
-                                        .header("Authorization", credentials)
-                                } else {
-                                    originalRequest.newBuilder()
-                                }
+                val useSavedSession = password.isEmpty() && sameAsSaved && tokenStore.hasSession
 
-                            chain.proceed(requestBuilder.build())
+                val api: IRetrofitApi =
+                    if (useSavedSession) {
+                        retrofitApi
+                    } else {
+                        if (username.isEmpty() || password.isEmpty()) {
+                            reportTestFailure(400, "Enter your username and password to test.")
+                            return@launch
                         }
-                        .addInterceptor(loggingInterceptor)
-                        .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .build()
 
-                val retrofit = Retrofit.Builder()
-                    .baseUrl(baseUrl)
-                    .client(okHttpClient)
-                    .addConverterFactory(GsonConverterFactory.create())
-                    .build()
+                        accessToken = authService.loginAgainst(baseUrl, username, password)
 
-                val api =
-                    retrofit
-                        .create(IRetrofitApi::class.java)
+                        if (accessToken == null) {
+                            reportTestFailure(401, "Invalid username or password.")
+                            return@launch
+                        }
 
-                // Make the test call
+                        buildTestApi(baseUrl, accessToken)
+                    }
+
                 val httpResponse =
                     api
                         .apiConnectionTest()
@@ -123,8 +113,46 @@ class ApiService @Inject constructor(
                     )
                     listener?.onApiResponseFailure(errorResponse)
                 }
+            } finally {
+                accessToken?.let { authService.logoutAgainst(baseUrl, it) }
             }
         }
+    }
+
+    private suspend fun reportTestFailure(code: Int, message: String) =
+        withContext(Dispatchers.Main) {
+            listener?.onApiResponseFailure(
+                ConnectionTestResponse(errorCode = code, errorMessage = message)
+            )
+        }
+
+    private fun buildTestApi(baseUrl: String, token: String): IRetrofitApi {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+            redactHeader("Authorization")
+        }
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header("Authorization", "Bearer $token")
+                        .build()
+                )
+            }
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+
+        return Retrofit
+            .Builder()
+            .baseUrl(baseUrl)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(IRetrofitApi::class.java)
     }
 
     override fun uploadCapture(

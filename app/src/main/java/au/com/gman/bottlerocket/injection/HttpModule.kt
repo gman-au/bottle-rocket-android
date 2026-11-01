@@ -3,6 +3,8 @@ package au.com.gman.bottlerocket.injection
 import au.com.gman.bottlerocket.settings.AppSettings
 import au.com.gman.bottlerocket.interfaces.IRetrofitApi
 import au.com.gman.bottlerocket.network.AuthInterceptor
+import au.com.gman.bottlerocket.network.BaseUrlInterceptor
+import au.com.gman.bottlerocket.network.TokenAuthenticator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -12,6 +14,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -21,14 +24,31 @@ object HttpModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    @Named("auth")
+    fun provideAuthOkHttpClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        baseUrlInterceptor: BaseUrlInterceptor,
+        tokenAuthenticator: TokenAuthenticator
+    ): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
+            redactHeader("Authorization")
         }
 
         return OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
+            .addInterceptor(baseUrlInterceptor)
+            .addInterceptor(authInterceptor)   // must stay before logging, or the logger never sees the header
             .addInterceptor(loggingInterceptor)
+            .authenticator(tokenAuthenticator)
             .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -41,7 +61,7 @@ object HttpModule {
         appSettings: AppSettings
     ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(appSettings.apiBaseUrl)
+            .baseUrl("http://localhost/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

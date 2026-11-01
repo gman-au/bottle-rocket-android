@@ -17,8 +17,12 @@ class AppSettings @Inject constructor(
     companion object {
         private const val KEY_API_BASE_URL = "api_base_url"
         private const val KEY_USERNAME = "username"
-        private const val KEY_PASSWORD = "password"
         private const val DEFAULT_BASE_URL = "http://127.0.0.1:3001/"
+    }
+
+    init {
+        // Remove the plaintext password left behind by the old Basic auth version
+        prefs.edit { remove("password") }
     }
 
     var apiBaseUrl: String
@@ -33,19 +37,9 @@ class AppSettings @Inject constructor(
             prefs.edit { putString(KEY_USERNAME, value) }
         }
 
-    var password: String
-        get() = prefs.getString(KEY_PASSWORD, "") ?: ""
-        set(value) {
-            prefs.edit { putString(KEY_PASSWORD, value) }
-        }
-
     fun resetToDefault() {
         apiBaseUrl = DEFAULT_BASE_URL
         username = ""
-        password = ""
-    }
-
-    fun hasCredentials(): Boolean {
-        return username.isNotEmpty() && password.isNotEmpty()
+        // the caller should also clear the token session (authService.logout() or tokenStore.clear())
     }
 }

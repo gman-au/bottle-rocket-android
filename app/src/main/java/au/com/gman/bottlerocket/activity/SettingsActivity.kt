@@ -10,12 +10,20 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import au.com.gman.bottlerocket.R
 import au.com.gman.bottlerocket.settings.AppSettings
 import au.com.gman.bottlerocket.interfaces.IApiResponse
 import au.com.gman.bottlerocket.interfaces.IApiResponseListener
 import au.com.gman.bottlerocket.interfaces.IApiService
+import au.com.gman.bottlerocket.interfaces.IWorkflowCache
+import au.com.gman.bottlerocket.network.AuthService
+import au.com.gman.bottlerocket.network.TokenStore
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -26,6 +34,15 @@ class SettingsActivity : AppCompatActivity() {
 
     @Inject
     lateinit var apiService: IApiService
+
+    @Inject
+    lateinit var authService: AuthService
+
+    @Inject
+    lateinit var tokenStore: TokenStore
+
+    @Inject
+    lateinit var workflowCache: IWorkflowCache
 
     private lateinit var urlInput: EditText
     private lateinit var usernameInput: EditText
@@ -70,7 +87,9 @@ class SettingsActivity : AppCompatActivity() {
         // Load current settings
         urlInput.setText(appSettings.apiBaseUrl)
         usernameInput.setText(appSettings.username)
-        passwordInput.setText(appSettings.password)
+
+        // password is deliberately not restored: it is never stored
+        updatePasswordHint()
 
         cancelButton
             .setOnClickListener {
@@ -84,28 +103,22 @@ class SettingsActivity : AppCompatActivity() {
 
         testConnectionButton
             .setOnClickListener {
+                var url = urlInput.text.toString().trim()
+
+                if (url.isEmpty()) {
+                    Toast.makeText(this, "URL cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (!url.endsWith("/")) url += "/"
+
                 setLoadingState(true)
 
-                val username =
-                    usernameInput
-                        .text
-                        .toString()
-                        .trim()
-
-                val password =
-                    passwordInput
-                        .text
-                        .toString()
-                        .trim()
-
-                val url =
-                    urlInput
-                        .text
-                        .toString()
-                        .trim()
-
                 apiService
-                    .testConnection(url, username, password)
+                    .testConnection(
+                        url,
+                        usernameInput.text.toString().trim(),
+                        passwordInput.text.toString().trim()
+                    )
             }
 
         saveButton
@@ -127,28 +140,97 @@ class SettingsActivity : AppCompatActivity() {
                     url += "/"
                 }
 
-                appSettings.apiBaseUrl = url
-                appSettings.username = usernameInput.text.toString().trim()
-                appSettings.password = passwordInput.text.toString().trim()
+                val username = usernameInput.text.toString().trim()
+                val password = passwordInput.text.toString().trim()
 
-                val intent = Intent(this, RestartRequiredActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+                val nothingChanged =
+                    tokenStore.hasSession &&
+                            url == appSettings.apiBaseUrl &&
+                            username == appSettings.username
+
+                if (password.isEmpty()) {
+                    if (nothingChanged) {
+                        finish()
+                    } else {
+                        Toast.makeText(this, "Enter your password to sign in", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                    return@setOnClickListener
+                }
+
+                setLoadingState(true)
+
+                lifecycleScope.launch {
+                    try {
+                        val result = withContext(Dispatchers.IO) {
+                            authService
+                                .signIn(
+                                    url,
+                                    username,
+                                    password
+                                )
+                        }
+
+                        if (result == null) {
+                            setLoadingState(false)
+                            Toast.makeText(
+                                this@SettingsActivity,
+                                "Invalid username or password",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            return@launch
+                        }
+
+                        passwordInput
+                            .text
+                            .clear()
+
+                        workflowCache.loadWorkflows().fold(
+                            onSuccess = {
+                                val intent = Intent(this@SettingsActivity, MainActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                startActivity(intent)
+                                finish()
+                            },
+                            onFailure = { error ->
+                                setLoadingState(false)
+                                updatePasswordHint()
+                                Toast.makeText(
+                                    this@SettingsActivity,
+                                    "Signed in, but couldn't load workflows: ${error.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        )
+                    } catch (e: IOException) {
+                        setLoadingState(false)
+                        Toast
+                            .makeText(
+                                this@SettingsActivity,
+                                "Can't reach the server",
+                                Toast.LENGTH_LONG
+                            ).show()
+                    }
+                }
             }
 
         resetButton
             .setOnClickListener {
-                appSettings
-                    .resetToDefault()
+                setLoadingState(true)
+                lifecycleScope.launch {
+                    // Revoke on the current server first, because resetting changes the URL
+                    withContext(Dispatchers.IO) { authService.logout() }
 
-                urlInput.setText(appSettings.apiBaseUrl)
-                usernameInput.setText(appSettings.username)
-                passwordInput.setText(appSettings.password)
+                    appSettings.resetToDefault()
+                    urlInput.setText(appSettings.apiBaseUrl)
+                    usernameInput.setText("")
+                    passwordInput.text.clear()
+                    updatePasswordHint()
 
-                Toast
-                    .makeText(this, "Reset to default", Toast.LENGTH_SHORT)
-                    .show()
+                    setLoadingState(false)
+                    Toast.makeText(this@SettingsActivity, "Reset to default", Toast.LENGTH_SHORT)
+                        .show()
+                }
             }
 
         apiService
@@ -183,11 +265,17 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setLoadingState(isLoading: Boolean) {
+        usernameInput.isEnabled = !isLoading
+        passwordInput.isEnabled = !isLoading
         progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         testConnectionButton.isEnabled = !isLoading
         cancelButton.isEnabled = !isLoading
         saveButton.isEnabled = !isLoading
         resetButton.isEnabled = !isLoading
         urlInput.isEnabled = !isLoading
+    }
+
+    private fun updatePasswordHint() {
+        passwordInput.hint = if (tokenStore.hasSession) "*****" else "Password"
     }
 }

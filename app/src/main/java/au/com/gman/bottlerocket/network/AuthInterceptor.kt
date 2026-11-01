@@ -1,35 +1,29 @@
 package au.com.gman.bottlerocket.network
 
-import au.com.gman.bottlerocket.settings.AppSettings
-import okhttp3.Credentials
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
 
 class AuthInterceptor @Inject constructor(
-    private val appSettings: AppSettings
+    private val tokenStore: TokenStore,
+    private val authService: AuthService
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest = chain.request()
+        val original = chain.request()
+        var token = tokenStore.accessToken
 
-        val requestBuilder =
-            if (appSettings.hasCredentials()) {
-                val credentials =
-                    Credentials
-                        .basic(
-                            appSettings.username,
-                            appSettings.password
-                        )
+        // Refresh before sending, so the server normally never sees an expired token
+        if (token != null && authService.isExpiring(token)) {
+            token = authService.refreshAccessToken(token) ?: token
+        }
 
-                originalRequest
-                    .newBuilder()
-                    .header("Authorization", credentials)
-            } else {
-                originalRequest
-                    .newBuilder()
-            }
+        val request =
+            if (token != null)
+                original.newBuilder().header("Authorization", "Bearer $token").build()
+            else
+                original
 
-        return chain.proceed(requestBuilder.build())
+        return chain.proceed(request)
     }
 }
