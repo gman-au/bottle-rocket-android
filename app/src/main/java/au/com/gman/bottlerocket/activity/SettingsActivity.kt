@@ -224,6 +224,7 @@ class SettingsActivity : AppCompatActivity() {
                     appSettings.resetToDefault()
                     urlInput.setText(appSettings.apiBaseUrl)
                     usernameInput.setText("")
+                    passwordInput.text.clear()
                     updatePasswordHint()
 
                     setLoadingState(false)
