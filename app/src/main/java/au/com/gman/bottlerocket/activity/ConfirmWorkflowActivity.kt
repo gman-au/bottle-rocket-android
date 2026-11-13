@@ -14,17 +14,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import au.com.gman.bottlerocket.R
-import au.com.gman.bottlerocket.contracts.ProcessCaptureResponse
 import au.com.gman.bottlerocket.contracts.WorkflowSummary
 import au.com.gman.bottlerocket.domain.BatchPhoto
-import au.com.gman.bottlerocket.interfaces.IApiResponse
-import au.com.gman.bottlerocket.interfaces.IApiResponseListener
 import au.com.gman.bottlerocket.interfaces.IApiService
 import au.com.gman.bottlerocket.interfaces.IBatchRepository
 import au.com.gman.bottlerocket.interfaces.IWorkflowCache
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class ConfirmWorkflowActivity : AppCompatActivity() {
@@ -56,7 +54,6 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
     private var inFlight: BatchPhoto? = null
     private var workflows: Set<String> = emptySet()
     private var totalToSend = 0
-    private var selectedWorkflows: Set<String> = emptySet()
 
     companion object {
         private const val TAG = "ConfirmWorkflowActivity"
@@ -80,11 +77,25 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         progressText = findViewById(R.id.progressText)
 
         sendButton.setOnClickListener {
-            if (batchRepository.photos.value.isEmpty()) return@setOnClickListener
-            workflows = adapter.getSelectedIds()
-            pending.clear(); pending.addAll(batchRepository.photos.value)
+            if (batchRepository.photos.value.isEmpty() && batchRepository.remoteBatchId == null) return@setOnClickListener
+            val workflows = adapter.getSelectedIds()
             setLoadingState(true)
-            sendNext()
+
+            lifecycleScope.launch {
+                sendBatch(workflows).fold(
+                    onSuccess = { total ->
+                        setLoadingState(false)
+                        Toast.makeText(this@ConfirmWorkflowActivity,
+                            "Sent $total photos", Toast.LENGTH_SHORT).show()
+                        if (isSharedFlow) finishAffinity() else returnToCapture()
+                    },
+                    onFailure = { e ->
+                        setLoadingState(false)
+                        Toast.makeText(this@ConfirmWorkflowActivity,
+                            "${e.message}. Tap Send to retry.", Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
         }
 
         cancelButton.setOnClickListener { finish() }     // back to review
@@ -93,60 +104,6 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
         showResults(workflowCache.getWorkflows())
-
-        apiService.setListener(object : IApiResponseListener {
-            override fun onApiProcessCaptureSuccess(response: ProcessCaptureResponse) {
-                // this photo is done: take it out of the batch so a retry skips it
-                inFlight?.let { batchRepository.remove(it.id) }
-                inFlight = null
-                sendNext()
-            }
-
-            override fun onApiResponseFailure(response: IApiResponse) {
-                val remaining = pending.size + (if (inFlight != null) 1 else 0)
-                val sent = totalToSend - remaining
-                inFlight = null
-                pending.clear()
-                setLoadingState(false)
-                Toast.makeText(
-                    this@ConfirmWorkflowActivity,
-                    "Sent $sent of $totalToSend. $remaining left, tap Send to retry. (${response.errorMessage})",
-                    Toast.LENGTH_LONG
-                ).show()
-                Log.e(
-                    TAG,
-                    "API Error - Code: ${response.errorCode}, Message: ${response.errorMessage}"
-                )
-            }
-        })
-    }
-
-    private val uploading get() = loadingOverlay.isVisible
-
-    private fun startSending() {
-        val photos = batchRepository.photos.value.orEmpty()
-        if (photos.isEmpty()) {
-            Toast.makeText(this, "No images to upload", Toast.LENGTH_SHORT).show()
-            return
-        }
-        selectedWorkflows = adapter.getSelectedIds()     // snapshot once for the whole batch
-        pending.clear()
-        pending.addAll(photos)
-        totalToSend = photos.size
-        setLoadingState(true)
-        sendNext()
-    }
-
-    private fun sendNext() {
-        val next = pending.removeFirstOrNull()
-        if (next == null) {
-            setLoadingState(false)
-            Toast.makeText(this, "Upload successful", Toast.LENGTH_SHORT).show()
-            if (isSharedFlow) finishAffinity() else returnToCapture()
-            return
-        }
-        inFlight = next
-        apiService.uploadCapture(next.uri, next.vendor, workflows, cacheDir, contentResolver)
     }
 
     private fun setLoadingState(isLoading: Boolean) {
@@ -176,6 +133,30 @@ class ConfirmWorkflowActivity : AppCompatActivity() {
         }
         startActivity(intent)
         finish()
+    }
+
+    private suspend fun sendBatch(workflows: Set<String>): Result<Int> {
+        val photos = batchRepository.photos.value
+        val total = photos.size
+
+        var batchId = batchRepository.remoteBatchId
+        if (batchId == null) {
+            batchId = apiService.openBatch().getOrElse { return Result.failure(it) }
+            batchRepository.remoteBatchId = batchId
+        }
+
+        photos.forEachIndexed { i, photo ->
+            progressText.text = "Sending ${i + 1} of $total"
+            apiService.uploadToBatch(batchId, photo.uri, photo.vendor, cacheDir, contentResolver)
+                .onFailure { return Result.failure(it) }
+            batchRepository.remove(photo.id)
+        }
+
+        progressText.text = "Running workflows…"
+        apiService.closeBatch(batchId, workflows).onFailure { return Result.failure(it) }
+
+        batchRepository.clear()
+        return Result.success(total)
     }
 
 }

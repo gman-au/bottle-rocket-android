@@ -27,7 +27,7 @@
     <string name="settings_updated">Settings Updated</string>
     <string name="warning_restart">Your server settings have been saved.\n\nPlease restart the app to connect to the new server and download the page templates.</string>
     <string name="close_app">Close</string>
-    <string name="info_workflows">This image will be sent to your Bottle Rocket server.\nYou can also tell it to run one or more workflows that you have configured.\nClick the Send button below to confirm.</string>
+    <string name="info_workflows">These images will be sent to your Bottle Rocket server.\nYou can also tell it to run one or more workflows that you have configured.\nClick the Send button below to confirm.</string>
     <string name="no_workflows_found">No workflows found on your server. This scan will be uploaded without any further processing.</string>
     <string name="back_to_camera">Back to camera</string>
     <string name="no_photos_yet">No photos yet</string>

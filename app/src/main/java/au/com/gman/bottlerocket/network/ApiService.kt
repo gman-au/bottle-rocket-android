@@ -4,7 +4,7 @@ import au.com.gman.bottlerocket.contracts.ConnectionTestResponse
 import android.content.ContentResolver
 import android.net.Uri
 import android.util.Log
-import au.com.gman.bottlerocket.contracts.ProcessCaptureResponse
+import au.com.gman.bottlerocket.contracts.CloseBatchRequest
 import au.com.gman.bottlerocket.domain.ApiStatusCodeEnum
 import au.com.gman.bottlerocket.interfaces.IApiResponseListener
 import au.com.gman.bottlerocket.interfaces.IApiService
@@ -24,8 +24,10 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 class ApiService @Inject constructor(
     private val fileIo: IFileIo,
@@ -155,100 +157,56 @@ class ApiService @Inject constructor(
             .create(IRetrofitApi::class.java)
     }
 
-    override fun uploadCapture(
-        imageUri: Uri,
-        vendor: String,
-        workflows: Set<String>,
-        cacheDir: File,
-        contentResolver: ContentResolver
-    ): Result<ProcessCaptureResponse> {
-        // Launch coroutine for async operation
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val file = fileIo.loadImage(
-                    imageUri,
-                    cacheDir,
-                    contentResolver
+    override suspend fun openBatch(): Result<String> = withContext(Dispatchers.IO) {
+        apiCall("Open batch") {
+            val r = retrofitApi.apiBatchOpen()
+            val id = r.body()?.batchId
+            if (!r.isSuccessful || id.isNullOrBlank())
+                throw IOException("HTTP ${r.code()} ${r.message()}")
+            id
+        }
+    }
+
+    override suspend fun uploadToBatch(
+        batchId: String, imageUri: Uri, vendor: String,
+        cacheDir: File, contentResolver: ContentResolver
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        var file: File? = null
+        try {
+            apiCall("Upload") {
+                val f = fileIo.loadImage(imageUri, cacheDir, contentResolver).also { file = it }
+                val imagePart = MultipartBody.Part.createFormData(
+                    "image", f.name, f.asRequestBody("image/jpg".toMediaTypeOrNull())
                 )
+                val text = "text/plain".toMediaTypeOrNull()
+                val r = retrofitApi.apiCaptureProcess(
+                    imagePart, vendor.toRequestBody(text), batchId.toRequestBody(text)
+                )
+                val body = r.body()
+                if (!r.isSuccessful || body == null)
+                    throw IOException("HTTP ${r.code()} ${r.message()}")
+                if (!body.isSuccess()) throw IOException(body.errorMessage)
+            }
+        } finally {
+            file?.delete()
+        }
+    }
 
-                val requestFile =
-                    file
-                        .asRequestBody(
-                            "image/jpg".toMediaTypeOrNull()
-                        )
-
-                val imagePart =
-                    MultipartBody
-                        .Part
-                        .createFormData(
-                            "image",
-                            file.name,
-                            requestFile
-                        )
-
-                val vendor = vendor.toRequestBody("text/plain".toMediaTypeOrNull())
-
-                val workflowParts = workflows.map { id ->
-                    MultipartBody.Part.createFormData("workflows", id)
-                }
-
-                // Make actual API call
-                val httpResponse =
-                    retrofitApi
-                        .apiCaptureProcess(
-                            imagePart,
-                            vendor,
-                            workflowParts
-                        )
-
-                // Delete temp file
-                file
-                    .delete()
-
-                // Switch to Main thread for listener callbacks
-                withContext(Dispatchers.Main) {
-                    if (httpResponse.isSuccessful && httpResponse.body() != null) {
-                        val response = httpResponse.body()!!
-
-                        if (response.isSuccess()) {
-                            listener?.onApiProcessCaptureSuccess(response)
-                        } else {
-                            listener?.onApiResponseFailure(response)
-                        }
-                    } else {
-                        // HTTP error - create error response
-                        val errorResponse = ProcessCaptureResponse(
-                            errorCode = httpResponse.code(),
-                            errorMessage = "HTTP Error: ${httpResponse.code()} - ${httpResponse.message()}"
-                        )
-                        Log.e(
-                            TAG,
-                            "APIService HTTP error: ${httpResponse.code()} - ${httpResponse.message()}"
-                        )
-                        listener?.onApiResponseFailure(errorResponse)
-                    }
-                }
-
-            } catch (e: Exception) {
-                // Handle exceptions
-                withContext(Dispatchers.Main) {
-                    val errorResponse = ProcessCaptureResponse(
-                        errorCode = ApiStatusCodeEnum.UNKNOWN_ERROR.ordinal,
-                        errorMessage = "Exception: ${e.message}"
-                    )
-                    Log.e(
-                        TAG,
-                        "APIService error: ${e.message}"
-                    )
-                    listener?.onApiResponseFailure(errorResponse)
-                }
+    override suspend fun closeBatch(batchId: String, workflows: Set<String>): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            apiCall("Close batch") {
+                val r = retrofitApi.apiBatchClose(CloseBatchRequest(batchId, workflows.toList()))
+                if (!r.isSuccessful) throw IOException("HTTP ${r.code()} ${r.message()}")
             }
         }
 
-        // TODO
-        return Result.success(ProcessCaptureResponse(
-            errorCode = 200,
-            errorMessage = ""
-        ));
-    }
+    private suspend fun <T> apiCall(what: String, block: suspend () -> T): Result<T> =
+        try {
+            Result.success(block())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "$what failed: ${e.message}")
+            Result.failure(Exception("$what failed: ${e.message}", e))
+        }
 }

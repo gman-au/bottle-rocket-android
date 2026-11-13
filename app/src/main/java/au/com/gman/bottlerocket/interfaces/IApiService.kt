@@ -2,20 +2,23 @@ package au.com.gman.bottlerocket.interfaces
 
 import android.content.ContentResolver
 import android.net.Uri
-import au.com.gman.bottlerocket.contracts.ProcessCaptureResponse
 import java.io.File
 
 interface IApiService {
 
     fun testConnection(baseUrl: String, username: String, password: String)
 
-    fun uploadCapture(
+    suspend fun openBatch(): Result<String>
+
+    suspend fun uploadToBatch(
+        batchId: String,
         imageUri: Uri,
         vendor: String,
-        workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
-    ): Result<ProcessCaptureResponse>
+    ): Result<Unit>
+
+    suspend fun closeBatch(batchId: String, workflows: Set<String>): Result<Unit>
 
     fun setListener(listener: IApiResponseListener)
 }

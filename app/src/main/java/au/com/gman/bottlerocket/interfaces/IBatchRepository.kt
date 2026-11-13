@@ -9,4 +9,6 @@ interface IBatchRepository {
     fun add(uri: Uri, vendor: String)
     fun remove(id: String)
     fun clear()
+
+    var remoteBatchId: String?
 }

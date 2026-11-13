@@ -17,5 +17,7 @@ class BatchRepository @Inject constructor() : IBatchRepository {
 
     override fun add(uri: Uri, vendor: String) = _photos.update { it + BatchPhoto(uri = uri, vendor = vendor) }
     override fun remove(id: String) = _photos.update { list -> list.filterNot { it.id == id } }
-    override fun clear() { _photos.value = emptyList() }
+
+    override var remoteBatchId: String? = null
+    override fun clear() { _photos.value = emptyList(); remoteBatchId = null }
 }
