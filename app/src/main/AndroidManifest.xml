@@ -90,6 +90,7 @@
                 <action android:name="android.intent.action.SERVER_WARNING" />
             </intent-filter>
         </activity>
+        <activity android:name=".activity.ReviewActivity" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

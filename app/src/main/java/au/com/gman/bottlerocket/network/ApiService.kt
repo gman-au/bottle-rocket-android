@@ -161,7 +161,7 @@ class ApiService @Inject constructor(
         workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
-    ) {
+    ): Result<ProcessCaptureResponse> {
         // Launch coroutine for async operation
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -244,5 +244,11 @@ class ApiService @Inject constructor(
                 }
             }
         }
+
+        // TODO
+        return Result.success(ProcessCaptureResponse(
+            errorCode = 200,
+            errorMessage = ""
+        ));
     }
 }

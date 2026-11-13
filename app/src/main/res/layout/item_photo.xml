@@ -1,0 +1,35 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="4dp">
+
+    <ImageView
+        android:id="@+id/thumb"
+        android:layout_width="match_parent"
+        android:layout_height="160dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/captured_page" />
+
+    <ImageButton
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/btnDelete"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="6dp"
+        android:background="@color/bottle_rocket_dark"
+        android:src="@drawable/baseline_cancel_24"
+        app:srcCompat="@drawable/baseline_cancel_24"
+        app:tint="@color/danger"
+        android:contentDescription="@string/remove_photo" />
+
+    <TextView
+        android:id="@+id/indexText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="8dp"
+        android:background="#99000000"
+        android:paddingHorizontal="6dp"
+        android:textColor="@android:color/white" />
+</FrameLayout>

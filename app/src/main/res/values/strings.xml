@@ -29,4 +29,16 @@
     <string name="close_app">Close</string>
     <string name="info_workflows">This image will be sent to your Bottle Rocket server.\nYou can also tell it to run one or more workflows that you have configured.\nClick the Send button below to confirm.</string>
     <string name="no_workflows_found">No workflows found on your server. This scan will be uploaded without any further processing.</string>
+    <string name="back_to_camera">Back to camera</string>
+    <string name="no_photos_yet">No photos yet</string>
+    <string name="captured_page">Captured page</string>
+    <string name="remove_photo">Remove photo</string>
+    <plurals name="photo_count">
+        <item quantity="one">%d photo</item>
+        <item quantity="other">%d photos</item>
+    </plurals>
+    <plurals name="review_title">
+        <item quantity="one">Review (%d photo)</item>
+        <item quantity="other">Review (%d photos)</item>
+    </plurals>
 </resources>

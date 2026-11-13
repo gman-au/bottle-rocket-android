@@ -11,6 +11,7 @@
     <color name="bottle_rocket_light_disabled">#5596F7D0</color>
     <color name="warning">#fff6d06f</color>
     <color name="info">#ff18afe1</color>
+    <color name="danger">#fffe3f60</color>
     <color name="debug_text">#FFFF0000</color>
 
     <color name="bottle_rocket_text_primary">#FFffb375</color>

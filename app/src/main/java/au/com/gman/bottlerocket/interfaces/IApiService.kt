@@ -2,6 +2,7 @@ package au.com.gman.bottlerocket.interfaces
 
 import android.content.ContentResolver
 import android.net.Uri
+import au.com.gman.bottlerocket.contracts.ProcessCaptureResponse
 import java.io.File
 
 interface IApiService {
@@ -14,7 +15,7 @@ interface IApiService {
         workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
-    )
+    ): Result<ProcessCaptureResponse>
 
     fun setListener(listener: IApiResponseListener)
 }
