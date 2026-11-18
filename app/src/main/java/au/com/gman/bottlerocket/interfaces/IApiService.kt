@@ -8,13 +8,17 @@ interface IApiService {
 
     fun testConnection(baseUrl: String, username: String, password: String)
 
-    fun uploadCapture(
+    suspend fun openBatch(): Result<String>
+
+    suspend fun uploadToBatch(
+        batchId: String,
         imageUri: Uri,
         vendor: String,
-        workflows: Set<String>,
         cacheDir: File,
         contentResolver: ContentResolver
-    )
+    ): Result<Unit>
+
+    suspend fun closeBatch(batchId: String, workflows: Set<String>): Result<Unit>
 
     fun setListener(listener: IApiResponseListener)
 }

@@ -17,18 +17,23 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import au.com.gman.bottlerocket.R
+import au.com.gman.bottlerocket.interfaces.IBatchRepository
 import au.com.gman.bottlerocket.interfaces.IWorkflowCache
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
+import kotlin.jvm.java
 
 @AndroidEntryPoint
 class PreviewActivity : AppCompatActivity() {
 
     @Inject
     lateinit var workflowCache: IWorkflowCache
+
+    @Inject
+    lateinit var batchRepository: IBatchRepository
 
     private lateinit var imagePreview: ImageView
     private lateinit var sendButton: ImageButton
@@ -76,7 +81,8 @@ class PreviewActivity : AppCompatActivity() {
 
     /** Share flow: no CaptureActivity, no prior workflow fetch — do it now. */
     private fun handleSharedImage() {
-        val incomingUri = extractSharedImageUri(intent) ?: intent.getParcelableExtra<Uri>("imagePath")
+        val incomingUri =
+            extractSharedImageUri(intent) ?: intent.getParcelableExtra<Uri>("imagePath")
         val vendor = intent.getStringExtra("vendor") ?: getSendingAppLabel()
 
         if (incomingUri == null) {
@@ -114,23 +120,24 @@ class PreviewActivity : AppCompatActivity() {
         vendorText.text = vendor
 
         sendButton.setOnClickListener {
-            Log.d(TAG, "User approved send action -> confirming workflow")
-            imageUri?.let { uri ->
-                val confirmIntent = Intent(this, ConfirmWorkflowActivity::class.java)
-                confirmIntent.putExtra("imagePath", uri)
-                confirmIntent.putExtra("vendor", vendor)
-                confirmIntent.putExtra("isSharedFlow", isSharedFlow)
-                activityLauncher.launch(confirmIntent)
-            } ?: run {
-                Toast.makeText(this, "No image to upload", Toast.LENGTH_SHORT).show()
+            val uri = imageUri ?: run {
+                Toast.makeText(this, "No image to keep", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
+            sendButton.isEnabled = false
+            batchRepository.add(uri, vendor)
+
+            if (isSharedFlow) {
+                // no camera underneath, so go to the review screen instead
+                startActivity(Intent(this, ReviewActivity::class.java))
+            } else {
+                setResult(RESULT_OK)               // tells the camera "kept"
+            }
+            finish()
         }
 
-        if (imageUri != null) {
-            imagePreview.setImageURI(imageUri)
-        } else {
-            Toast.makeText(this, "No image found", Toast.LENGTH_SHORT).show()
-        }
+        imageUri?.let { imagePreview.setImageURI(it) }
+            ?: Toast.makeText(this, "No image found", Toast.LENGTH_SHORT).show()
     }
 
     private fun setLoading(loading: Boolean) {
@@ -145,7 +152,8 @@ class PreviewActivity : AppCompatActivity() {
 
         return try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(appInfo).toString() // "Google Photos", "Camera", etc.
+            packageManager.getApplicationLabel(appInfo)
+                .toString() // "Google Photos", "Camera", etc.
         } catch (e: PackageManager.NameNotFoundException) {
             ""
         }
@@ -182,7 +190,8 @@ class PreviewActivity : AppCompatActivity() {
                 },
                 onFailure = { error ->
                     Log.e(TAG, "Failed to load workflows for shared image", error)
-                    val warningIntent = Intent(this@PreviewActivity, ServerWarningActivity::class.java)
+                    val warningIntent =
+                        Intent(this@PreviewActivity, ServerWarningActivity::class.java)
                     warningIntent.putExtra("imagePath", imageUri)
                     warningIntent.putExtra("vendor", vendor)
                     warningIntent.putExtra("isSharedFlow", true)

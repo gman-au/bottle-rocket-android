@@ -1,6 +1,7 @@
 package au.com.gman.bottlerocket.activity
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PointF
@@ -11,6 +12,7 @@ import android.os.Bundle
 import android.util.Log
 import android.util.Range
 import android.widget.ImageButton
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
@@ -27,12 +29,16 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import au.com.gman.bottlerocket.PageCaptureOverlayView
 import au.com.gman.bottlerocket.R
 import au.com.gman.bottlerocket.domain.CaptureDetectionResult
 import au.com.gman.bottlerocket.domain.ImageEnhancementResponse
 import au.com.gman.bottlerocket.domain.RocketBoundingBox
-import au.com.gman.bottlerocket.extensions.toApiString
+import au.com.gman.bottlerocket.interfaces.IBatchRepository
 import au.com.gman.bottlerocket.interfaces.ICaptureDetectionListener
 import au.com.gman.bottlerocket.interfaces.IDetectionArbiter
 import au.com.gman.bottlerocket.interfaces.IFileIo
@@ -43,6 +49,7 @@ import au.com.gman.bottlerocket.interfaces.IScreenDimensions
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameIndicator
 import au.com.gman.bottlerocket.interfaces.ISteadyFrameListener
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -68,6 +75,9 @@ class CaptureActivity : AppCompatActivity() {
     @Inject
     lateinit var fileIo: IFileIo
 
+    @Inject
+    lateinit var batchRepository: IBatchRepository
+
     private lateinit var previewView: PreviewView
 
     private lateinit var overlayView: PageCaptureOverlayView
@@ -92,6 +102,8 @@ class CaptureActivity : AppCompatActivity() {
 
     private var locked = false
 
+    private var waitingForPageToLeave = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_capture_image)
@@ -104,8 +116,29 @@ class CaptureActivity : AppCompatActivity() {
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         cancelButton.setOnClickListener {
-            finish()
+            if ((batchRepository.photos.value.size) > 0) {
+                AlertDialog.Builder(this)
+                    .setTitle("Discard ${batchRepository.photos.value.size} photos?")
+                    .setPositiveButton("Discard") { _, _ -> batchRepository.clear(); finish() }
+                    .setNegativeButton("Keep taking photos", null)
+                    .show()
+            } else finish()
         }
+
+        val badge = findViewById<TextView>(R.id.badgeText)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                batchRepository.photos.collect { photos ->
+                    badge.text = photos.size.toString()
+                    badge.isVisible = photos.isNotEmpty()
+                }
+            }
+        }
+
+        findViewById<ImageButton>(R.id.reviewButton)
+            .setOnClickListener {
+                startActivity(Intent(this, ReviewActivity::class.java))
+            }
 
         steadyFrameIndicator.setProcessing(false)
 
@@ -138,10 +171,13 @@ class CaptureActivity : AppCompatActivity() {
                                     overlayView.setUnmatchedQrCode(null)
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             overlayView.setUnmatchedQrCode(null)
                             steadyFrameIndicator.reset()
+                            if (waitingForPageToLeave) {          // page gone, so re-arm
+                                waitingForPageToLeave = false
+                                locked = false
+                            }
                         }
 
                         lastCaptureDetectionResult = captureDetectionResult
@@ -198,9 +234,11 @@ class CaptureActivity : AppCompatActivity() {
         val activityLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
-            if (result.resultCode == RESULT_CANCELED) {
-                steadyFrameIndicator.setProcessing(false)
-                steadyFrameIndicator.reset()
+            steadyFrameIndicator.setProcessing(false)
+            steadyFrameIndicator.reset()
+            if (result.resultCode == RESULT_OK) {
+                waitingForPageToLeave = true
+            } else {
                 locked = false
             }
         }
@@ -395,7 +433,8 @@ class CaptureActivity : AppCompatActivity() {
 
         if (requestCode == STORAGE_PERMISSION_CODE) {
             if (grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            ) {
                 // Permission granted - proceed with save
             } else {
                 Toast.makeText(this, "Storage permission required", Toast.LENGTH_SHORT).show()
