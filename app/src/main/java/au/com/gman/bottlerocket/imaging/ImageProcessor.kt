@@ -46,6 +46,9 @@ class ImageProcessor @Inject constructor(
                 Log.d(TAG, "Processed: ${processedResponse.bitmap.width}x${processedResponse.bitmap.height}")
 
                 listener?.onProcessingSuccess(processedResponse)
+            } else {
+                Log.w(TAG, "Processor returned null (no template match?)")
+                listener?.onProcessingFailure()
             }
 
         } catch (e: Exception) {

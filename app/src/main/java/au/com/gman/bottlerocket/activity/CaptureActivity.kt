@@ -202,12 +202,7 @@ class CaptureActivity : AppCompatActivity() {
 
                 override fun onProcessingFailure() {
                     runOnUiThread {
-                        Toast.makeText(
-                            baseContext,
-                            "There was an error processing the image",
-                            Toast.LENGTH_SHORT
-                        )
-                            .show()
+                        unlockCapture()   // no toast
                     }
                 }
             })
@@ -246,11 +241,13 @@ class CaptureActivity : AppCompatActivity() {
         fileIo
             .setSaveListener(object : IFileSaveListener {
                 override fun onFileSaveSuccess(uri: Uri) {
-                    val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
-                    intent.putExtra("imagePath", uri);
-                    intent.putExtra("vendor", lastCaptureDetectionResult.vendor)
-                    activityLauncher.launch(intent);
-                    steadyFrameIndicator.setProcessing(false)
+                    runOnUiThread {
+                        val intent = Intent(this@CaptureActivity, PreviewActivity::class.java)
+                        intent.putExtra("imagePath", uri);
+                        intent.putExtra("vendor", lastCaptureDetectionResult.vendor)
+                        activityLauncher.launch(intent);
+                        steadyFrameIndicator.setProcessing(false)
+                    }
                 }
 
                 override fun onFileSaveFailure() {
@@ -260,6 +257,8 @@ class CaptureActivity : AppCompatActivity() {
                             "There was an error saving the image",
                             Toast.LENGTH_LONG
                         ).show()
+
+                        unlockCapture()
                     }
                 }
             })
@@ -380,7 +379,12 @@ class CaptureActivity : AppCompatActivity() {
     }
 
     private fun takePhoto() {
-        val imageCapture = imageCapture ?: return
+        val imageCapture = imageCapture
+        if (imageCapture == null) {
+            Log.w(TAG, "takePhoto called but imageCapture is null")
+            unlockCapture()
+            return
+        }
 
         val photoFile = File(
             cacheDir,
@@ -404,16 +408,25 @@ class CaptureActivity : AppCompatActivity() {
                             baseContext, "Capture failed: ${exc.message}",
                             Toast.LENGTH_SHORT
                         ).show()
+
+                        unlockCapture()
                     }
 
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                         cameraExecutor
                             .execute {
-                                imageProcessor
-                                    .processImage(
-                                        photoFile,
-                                        lastCaptureDetectionResult
-                                    )
+                                try {
+                                    imageProcessor
+                                        .processImage(
+                                            photoFile,
+                                            lastCaptureDetectionResult
+                                        )
+                                } catch (_: Exception) {
+                                    runOnUiThread {
+                                        Toast.makeText(baseContext, "There was an error processing the image", Toast.LENGTH_SHORT).show()
+                                    }
+                                    unlockCapture()
+                                }
                             }
                     }
                 }
@@ -469,6 +482,14 @@ class CaptureActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+    }
+
+    private fun unlockCapture() {
+        runOnUiThread {
+            steadyFrameIndicator.setProcessing(false)
+            steadyFrameIndicator.reset()
+            locked = false
+        }
     }
 
     companion object {
