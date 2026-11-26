@@ -6,15 +6,10 @@ import android.os.Bundle
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import au.com.gman.bottlerocket.R
-import au.com.gman.bottlerocket.qrCode.QrTemplateCache
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class ServerWarningActivity : AppCompatActivity() {
-
-    @Inject
-    lateinit var templateCache: QrTemplateCache
 
     private var isSharedFlow = false
     private var sharedImageUri: Uri? = null
